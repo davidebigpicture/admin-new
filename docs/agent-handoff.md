@@ -201,6 +201,15 @@ prevents a copied URL from bypassing the existing authorization model.
   flat under application-root `App_Code\AdminShell` with `Pilot*` /
   `AccessManager*` prefixes (no nested App_Code folders under AdminShell),
   not under `managed\App_Code`.
+- Still seeing the old blue **BIG PICTURE** banner and **Configuration** tabs
+  on Views after a shell deploy: the Classic ASP page is still getting the
+  previous compiled `PilotShell` from the parent app pool. Recycle the WVBPS
+  front-end application pool on the IIS server (or touch any file under
+  `App_Code\AdminShell` and wait for ASP.NET to recompile). Confirm in View
+  Source: you should see `<!-- pilot-shell-unified:... -->` and
+  `<header class="shell-header">`, not `class="row banner"`.
+- Do not keep a duplicate `dev\adminshell\App_Code` tree; only application-root
+  `App_Code\AdminShell` is compiled.
 - Parent “Authentication and Access Control” page: the parent layer intercepted
   the request before the pilot page.
 - `NOSESSION`: pilot cookie missing, invalid, or expired.

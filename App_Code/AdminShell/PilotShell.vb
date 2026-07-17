@@ -3,7 +3,8 @@ Imports System.Text
 Imports System.Web
 
 Public NotInheritable Class PilotShell
-    Private Const ShellAssetVersion As String = "071726j"
+    Private Const ShellAssetVersion As String = "071726k"
+    Public Const BuildMarker As String = "pilot-shell-unified"
 
     Private Sub New()
     End Sub
@@ -37,6 +38,7 @@ Public NotInheritable Class PilotShell
         html.AppendLine("<link rel=""stylesheet"" href=""https://maxcdn.bootstrapcdn.com/font-awesome/4.7.0/css/font-awesome.min.css"">")
         html.AppendLine("<link rel=""stylesheet"" href=""" & stylesUrl & """>")
         html.AppendLine("<link rel=""stylesheet"" href=""" & shellCssUrl & """>")
+        html.AppendLine("<!-- " & BuildMarker & ":" & ShellAssetVersion & " -->")
         html.AppendLine("<script>")
         html.AppendLine("var elapsedTime=0,timeOutInterval=3600;")
         html.AppendLine("function startTimer(){if(elapsedTime<timeOutInterval){elapsedTime++;var e=document.getElementById('timeremaining');if(e){var r=timeOutInterval-elapsedTime,m=Math.floor(r/60),s=r%60;e.textContent='Session time: '+String(Math.floor(m/60)).padStart(2,'0')+':'+String(m%60).padStart(2,'0')+':'+String(s).padStart(2,'0');}window.setTimeout(startTimer,1000);}else{window.location='" & logoutUrl & "';}}")
