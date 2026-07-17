@@ -602,8 +602,18 @@ body.pilot-classic .shell-footer__inner {
 body.pilot-classic .shell-header,
 body.pilot-classic .admin-menu,
 body.pilot-classic .shell-footer {
-    position: relative;
     z-index: 2;
+}
+
+body.pilot-classic .admin-layout {
+    align-items: stretch;
+}
+
+body.pilot-classic .admin-menu {
+    top: 0;
+    height: 100vh;
+    max-height: 100vh;
+    align-self: stretch;
 }
 
 body.pilot-classic .row.banner,
