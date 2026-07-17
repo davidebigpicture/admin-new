@@ -3,6 +3,8 @@ Imports System.Text
 Imports System.Web
 
 Public NotInheritable Class PilotShell
+    Private Const ShellAssetVersion As String = "071726j"
+
     Private Sub New()
     End Sub
 
@@ -13,9 +15,12 @@ Public NotInheritable Class PilotShell
         Dim encodedType = HttpUtility.HtmlEncode(PilotConfig.BannerType)
         Dim logoutUrl = HttpUtility.HtmlAttributeEncode(PilotConfig.LogoutUrl)
         Dim stylesUrl = HttpUtility.HtmlAttributeEncode(PilotConfig.StylesheetUrl)
-        Dim routes = PilotConfig.GetRoutes()
+        Dim shellCssUrl = HttpUtility.HtmlAttributeEncode(
+            PilotConfig.CombinePilot("managed/shared/shell.css") & "?v=" & ShellAssetVersion)
         Dim defaultRoute = PilotConfig.DefaultRoute
         Dim activePath = If(String.IsNullOrWhiteSpace(currentPath), defaultRoute, currentPath.Trim())
+        Dim managedBase = PilotConfig.CombinePilot("managed") & "/"
+        Dim encodedCurrentPath = HttpUtility.JavaScriptStringEncode(activePath)
 
         Dim html As New StringBuilder()
         html.AppendLine("<!DOCTYPE HTML>")
@@ -31,55 +36,84 @@ Public NotInheritable Class PilotShell
         html.AppendLine("<link rel=""stylesheet"" href=""https://maxcdn.bootstrapcdn.com/bootstrap/3.4.1/css/bootstrap.min.css"">")
         html.AppendLine("<link rel=""stylesheet"" href=""https://maxcdn.bootstrapcdn.com/font-awesome/4.7.0/css/font-awesome.min.css"">")
         html.AppendLine("<link rel=""stylesheet"" href=""" & stylesUrl & """>")
+        html.AppendLine("<link rel=""stylesheet"" href=""" & shellCssUrl & """>")
         html.AppendLine("<script>")
         html.AppendLine("var elapsedTime=0,timeOutInterval=3600;")
         html.AppendLine("function startTimer(){if(elapsedTime<timeOutInterval){elapsedTime++;var e=document.getElementById('timeremaining');if(e){var r=timeOutInterval-elapsedTime,m=Math.floor(r/60),s=r%60;e.textContent='Session time: '+String(Math.floor(m/60)).padStart(2,'0')+':'+String(m%60).padStart(2,'0')+':'+String(s).padStart(2,'0');}window.setTimeout(startTimer,1000);}else{window.location='" & logoutUrl & "';}}")
-        html.AppendLine("function logout(){window.location='" & logoutUrl & "';}")
-        html.AppendLine("function manageCodesO(){alert('Code administration is not part of the pilot yet.');}")
-        html.AppendLine("function manageCodes(){alert('Code administration is not part of the pilot yet.');}")
+        html.AppendLine("window.PilotManagedBase=""" & HttpUtility.JavaScriptStringEncode(managedBase) & """;")
+        html.AppendLine("window.PilotCurrentPath=""" & encodedCurrentPath & """;")
         html.AppendLine("</script>")
         html.AppendLine("</head>")
-        html.AppendLine("<body class=""bodyVer5 is-dev"" style=""margin:0"" onload=""startTimer()"">")
-        html.AppendLine("<div class=""row banner"">")
-        html.AppendLine("<div class=""col-xs-4 col-sm-2""><div class=""pageheaderwhite"">BIG PICTURE</div></div>")
-        html.AppendLine("<div class=""col-xs-4 col-sm-3 hidden-xs""><div class=""pageheaderwhitesmall"">" & encodedType & "</div></div>")
-        html.AppendLine("<div class=""col-xs-8 col-sm-7""><div class=""pageheaderwhite"">" & encodedBanner & "</div></div>")
+        html.AppendLine("<body class=""bodyVer5 is-dev pilot-classic"" onload=""startTimer()"">")
+        html.AppendLine("<header class=""shell-header"">")
+        html.AppendLine("<div class=""shell-header__inner"">")
+        html.AppendLine("<div class=""shell-brand"">")
+        html.AppendLine("<h1>" & encodedBanner & "</h1>")
+        If Not String.IsNullOrWhiteSpace(encodedType) Then
+            html.AppendLine("<p>" & encodedType & "</p>")
+        End If
         html.AppendLine("</div>")
-        html.AppendLine("<div class=""row"" id=""rowRibbonSession"">")
-        html.AppendLine("<div class=""col-sm-8 col-xs-8""><span class=""welcometext""><i class=""fa fa-lock""></i> " & encodedUser & " : <a href=""javascript:logout();"">Sign Out</a> | <span id=""timeremaining""></span></span></div>")
-        html.AppendLine("<div class=""col-sm-4 col-xs-4 text-right""><span class=""label label-warning"">Pilot</span></div>")
+        html.AppendLine("<p class=""shell-user"">")
+        html.AppendLine("Signed in as <strong>" & encodedUser & "</strong>")
+        html.AppendLine("<button type=""button"" id=""logoutButton"">Sign out</button>")
+        html.AppendLine("| <span id=""timeremaining""></span>")
+        html.AppendLine("<span class=""shell-pilot-badge"">Pilot</span>")
+        html.AppendLine("</p>")
+        html.AppendLine("<div id=""pilotToolNav""></div>")
         html.AppendLine("</div>")
-        html.AppendLine("<div class=""row"" id=""menuAndContent"">")
-        html.AppendLine("<div class=""col-sm-2 col-xl-1"" id=""col-left"">")
-        html.AppendLine("<table width=""100%"" cellpadding=""0"" cellspacing=""0"" border=""0"" id=""menuModule"">")
-        html.AppendLine("<tr><td class=""module"" data-active=""true""><a class=""navheading"" href=""" &
-            HttpUtility.HtmlAttributeEncode(defaultRoute) & """>Configuration</a></td></tr>")
-        html.AppendLine("</table>")
-        html.AppendLine("</div>")
-        html.AppendLine("<div class=""col-sm-10 col-xl-11"" id=""col-right"">")
-        html.AppendLine("<div id=""sectionHeader""><span class=""pageheader"">Configuration</span></div>")
-        html.AppendLine("<table cellpadding=""0"" cellspacing=""0"" border=""0"" id=""sectionMenu""><tr>")
-
-        For Each route As PilotRouteMapping In routes
-            Dim isActive = String.Equals(activePath, route.PilotPath, StringComparison.OrdinalIgnoreCase)
-            Dim tabClass = If(isActive, "tabon", "taboff")
-            Dim textClass = If(isActive, "tabtexton", "tabtextoff")
-            html.AppendLine(
-                "<td align=""center"" class=""" & tabClass & """><a class=""" & textClass & """ href=""" &
-                HttpUtility.HtmlAttributeEncode(route.PilotPath) & """>" &
-                HttpUtility.HtmlEncode(route.NavLabel) & "</a></td>")
-        Next
-
-        html.AppendLine("</tr></table>")
+        html.AppendLine("</header>")
+        html.AppendLine("<div class=""admin-layout admin-layout--classic"" id=""adminLayout"">")
+        html.AppendLine("<aside class=""admin-menu"" id=""adminMenu"" aria-label=""Primary navigation""></aside>")
+        html.AppendLine("<main class=""shell-main shell-main--classic"">")
         html.AppendLine("<div class=""mainbody"">")
         Return html.ToString()
     End Function
 
-    Public Shared Function RenderFooter() As String
+    Public Shared Function RenderFooter(currentPath As String) As String
         Dim currentYear = DateTime.UtcNow.Year.ToString(System.Globalization.CultureInfo.InvariantCulture)
-        Return "</div></div></div>" &
-            "<div class=""footerstyle"">&copy; Copyright 2002-" & currentYear & " Big Picture Software</div>" &
-            "<script src=""https://maxcdn.bootstrapcdn.com/bootstrap/3.4.1/js/bootstrap.min.js""></script>" &
-            "</body></html>"
+        Dim managedBase = PilotConfig.CombinePilot("managed") & "/"
+        Dim shellJsUrl = HttpUtility.HtmlAttributeEncode(
+            PilotConfig.CombinePilot("managed/shared/shell.js") & "?v=" & ShellAssetVersion)
+        Dim apiClientUrl = HttpUtility.HtmlAttributeEncode(PilotConfig.CombinePilot("managed/shared/api-client.js"))
+        Dim sessionUrl = HttpUtility.HtmlAttributeEncode(PilotConfig.CombinePilot("managed/shared/session.js"))
+        Dim activePath = HttpUtility.JavaScriptStringEncode(
+            If(String.IsNullOrWhiteSpace(currentPath), PilotConfig.DefaultRoute, currentPath.Trim()))
+
+        Dim html As New StringBuilder()
+        html.AppendLine("</div>")
+        html.AppendLine("</main>")
+        html.AppendLine("</div>")
+        html.AppendLine("<footer class=""shell-footer"">")
+        html.AppendLine("<div class=""shell-footer__inner""><span>Admin Shell Pilot</span></div>")
+        html.AppendLine("</footer>")
+        html.AppendLine("<script src=""https://maxcdn.bootstrapcdn.com/bootstrap/3.4.1/js/bootstrap.min.js""></script>")
+        html.AppendLine("<script src=""" & apiClientUrl & """></script>")
+        html.AppendLine("<script src=""" & sessionUrl & """></script>")
+        html.AppendLine("<script src=""" & shellJsUrl & """></script>")
+        html.AppendLine("<script>")
+        html.AppendLine("(function () {")
+        html.AppendLine("    if (!window.PilotApiClient || !window.PilotSession || !window.PilotShell) { return; }")
+        html.AppendLine("    window.PilotApiClient.setApiBase(window.PilotManagedBase || """");")
+        html.AppendLine("    window.PilotSession.configure({ sessionUrl: ""api/session.ashx"" });")
+        html.AppendLine("    window.PilotShell.bindLogout(document.getElementById(""logoutButton""));")
+        html.AppendLine("    var currentPath = window.PilotCurrentPath || """ & activePath & """;")
+        html.AppendLine("    window.PilotSession.load().then(function (session) {")
+        html.AppendLine("        window.PilotShell.renderNav(")
+        html.AppendLine("            document.getElementById(""pilotToolNav""),")
+        html.AppendLine("            (session.paths && session.paths.routes) || [],")
+        html.AppendLine("            currentPath")
+        html.AppendLine("        );")
+        html.AppendLine("        window.PilotShell.renderSectionMenu(")
+        html.AppendLine("            document.getElementById(""adminMenu""),")
+        html.AppendLine("            session.menuSections || [],")
+        html.AppendLine("            currentPath")
+        html.AppendLine("        );")
+        html.AppendLine("    }).catch(function () {});")
+        html.AppendLine("}());")
+        html.AppendLine("</script>")
+        html.AppendLine("<div class=""footerstyle"">&copy; Copyright 2002-" & currentYear & " Big Picture Software</div>")
+        html.AppendLine("</body>")
+        html.AppendLine("</html>")
+        Return html.ToString()
     End Function
 End Class

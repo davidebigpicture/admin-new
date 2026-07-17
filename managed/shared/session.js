@@ -2,9 +2,17 @@
 
 (function (global) {
     let session = null;
+    let sessionUrl = "api/session.ashx";
 
-    async function loadSession() {
-        const data = await global.PilotApiClient.get("api/session.ashx");
+    function configure(options) {
+        if (options && options.sessionUrl) {
+            sessionUrl = options.sessionUrl;
+        }
+    }
+
+    async function loadSession(url) {
+        const target = url || sessionUrl;
+        const data = await global.PilotApiClient.get(target);
         global.PilotApiClient.setCsrfToken(data.csrfToken);
         if (data.paths && data.paths.loginUrl) {
             global.PilotApiClient.setLoginUrl(data.paths.loginUrl);
@@ -31,6 +39,7 @@
     }
 
     global.PilotSession = {
+        configure: configure,
         load: loadSession,
         get: getSession,
         capabilities: getCapabilities,

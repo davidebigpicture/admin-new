@@ -141,6 +141,29 @@ Public NotInheritable Class PilotPolicy
         Return True
     End Function
 
+    Public Shared Function TryResolvePilotPathByCanonical(
+        canonicalPath As String,
+        routesConfig As String,
+        pilotRootPath As String,
+        globalAdminRootPath As String,
+        ByRef pilotPath As String) As Boolean
+
+        pilotPath = Nothing
+        If String.IsNullOrWhiteSpace(canonicalPath) Then
+            Return False
+        End If
+
+        Dim normalizedPath = canonicalPath.Trim()
+        For Each candidate As PilotRouteMapping In ParseRoutes(routesConfig, pilotRootPath, globalAdminRootPath)
+            If String.Equals(normalizedPath, candidate.CanonicalPath, StringComparison.OrdinalIgnoreCase) Then
+                pilotPath = candidate.PilotPath
+                Return True
+            End If
+        Next
+
+        Return False
+    End Function
+
     Public Shared Function IsPilotRoute(
         path As String,
         routesConfig As String,

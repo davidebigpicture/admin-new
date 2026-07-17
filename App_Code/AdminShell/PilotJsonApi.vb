@@ -197,6 +197,84 @@ Public NotInheritable Class PilotJsonApi
         Return payload
     End Function
 
+    Public Shared Function SerializeShellPaths() As Dictionary(Of String, Object)
+        Return New Dictionary(Of String, Object) From {
+            {"pilotRoot", PilotConfig.PilotRootPath},
+            {"globalAdminRoot", PilotConfig.GlobalAdminRootPath},
+            {"loginUrl", PilotConfig.LoginUrl},
+            {"logoutUrl", PilotConfig.LogoutUrl},
+            {"managedBase", PilotConfig.CombinePilot("managed") & "/"},
+            {"routes", SerializeRoutes()}
+        }
+    End Function
+
+    Public Shared Function LoadMenuSections(user As PilotUser) As IList(Of PilotMenuSection)
+        Try
+            Return New PilotRepository().ListMenuSections(user.MemberId)
+        Catch
+            Return New List(Of PilotMenuSection)()
+        End Try
+    End Function
+
+    Public Shared Function SerializeMenuSections(sections As IList(Of PilotMenuSection)) As IList(Of Dictionary(Of String, Object))
+        Dim payload As New List(Of Dictionary(Of String, Object))()
+        If sections Is Nothing Then
+            Return payload
+        End If
+
+        For Each section As PilotMenuSection In sections
+            Dim items As New List(Of Dictionary(Of String, Object))()
+            If section.Items IsNot Nothing Then
+                For Each item As PilotMenuItem In section.Items
+                    items.Add(New Dictionary(Of String, Object) From {
+                        {"ScriptId", item.ScriptId},
+                        {"Title", item.Title},
+                        {"Path", ResolveMenuItemPath(item.Path)}
+                    })
+                Next
+            End If
+
+            payload.Add(New Dictionary(Of String, Object) From {
+                {"SectionId", section.SectionId},
+                {"Title", section.Title},
+                {"Items", items}
+            })
+        Next
+
+        Return payload
+    End Function
+
+    Public Shared Function ResolveMenuItemPath(scriptPath As String) As String
+        If String.IsNullOrWhiteSpace(scriptPath) Then
+            Return scriptPath
+        End If
+
+        Dim trimmed = scriptPath.Trim()
+        Dim pilotPath As String = Nothing
+        If PilotPolicy.TryResolvePilotPathByCanonical(
+            trimmed,
+            PilotConfig.RoutesConfig,
+            PilotConfig.PilotRootPath,
+            PilotConfig.GlobalAdminRootPath,
+            pilotPath) Then
+            Return pilotPath
+        End If
+
+        Dim canonicalCandidate As String = Nothing
+        If Not trimmed.StartsWith("/", StringComparison.Ordinal) AndAlso
+            PilotPathConfig.TryCombine(PilotConfig.GlobalAdminRootPath, trimmed, canonicalCandidate) AndAlso
+            PilotPolicy.TryResolvePilotPathByCanonical(
+                canonicalCandidate,
+                PilotConfig.RoutesConfig,
+                PilotConfig.PilotRootPath,
+                PilotConfig.GlobalAdminRootPath,
+                pilotPath) Then
+            Return pilotPath
+        End If
+
+        Return trimmed
+    End Function
+
     Private Shared Sub WriteRaw(context As HttpContext, payload As Object)
         Dim serializer As New JavaScriptSerializer With {
             .MaxJsonLength = Integer.MaxValue

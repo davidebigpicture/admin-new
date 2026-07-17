@@ -153,8 +153,8 @@ Close the new `.admin-layout` / `.shell-main` wrappers cleanly. Verify
 
 ## Status
 
-- [ ] Step 1 — pilot-wide session API
-- [ ] Step 2 — `PilotShell.vb` chrome
-- [ ] Step 3 — menu path remap
-- [ ] Step 4 — footer / layout close
+- [x] Step 1 — pilot-wide session API (`managed/api/session.ashx`)
+- [x] Step 2 — `PilotShell.vb` chrome
+- [x] Step 3 — menu path remap (`PilotPolicy.TryResolvePilotPathByCanonical`)
+- [x] Step 4 — footer / layout close
 - [ ] Step 5 — tests and remote verification

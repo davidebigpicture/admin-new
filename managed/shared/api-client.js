@@ -3,6 +3,18 @@
 (function (global) {
     let csrfToken = "";
     let loginUrl = "../login.html";
+    let apiBase = "";
+
+    function setApiBase(base) {
+        apiBase = base || "";
+    }
+
+    function resolveUrl(url) {
+        if (!url || url.indexOf("://") >= 0 || url.charAt(0) === "/") {
+            return url;
+        }
+        return apiBase + url;
+    }
 
     function setLoginUrl(url) {
         if (url) {
@@ -58,7 +70,7 @@
             }
         }
 
-        const response = await fetch(url, opts);
+        const response = await fetch(resolveUrl(url), opts);
         const payload = await readJson(response);
 
         if (response.status === 401) {
@@ -99,6 +111,7 @@
         get: get,
         post: post,
         request: request,
+        setApiBase: setApiBase,
         setCsrfToken: setCsrfToken,
         getCsrfToken: getCsrfToken,
         setLoginUrl: setLoginUrl,

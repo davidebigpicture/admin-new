@@ -565,6 +565,39 @@ table.data td:last-child > .reorder-controls {
     margin: 0;
 }
 
+.admin-layout--classic {
+    width: 100%;
+    max-width: none;
+}
+
+.shell-main--classic {
+    padding: 0;
+}
+
+.shell-main--classic .mainbody {
+    padding: 0.75rem 1rem 1.5rem;
+}
+
+.shell-pilot-badge {
+    display: inline-block;
+    margin-left: 0.5rem;
+    padding: 0.1rem 0.45rem;
+    border-radius: 999px;
+    background: #f59e0b;
+    color: #1f2933;
+    font-size: 0.75rem;
+    font-weight: 600;
+    vertical-align: middle;
+}
+
+body.pilot-classic .shell-header__inner {
+    max-width: none;
+}
+
+body.pilot-classic .shell-footer__inner {
+    max-width: none;
+}
+
 .admin-menu {
     position: sticky;
     top: 7.4rem;

@@ -100,6 +100,25 @@ Module PilotPolicyTests
             0,
             PilotPolicy.ParseRoutes("=/admin/admin/views.asp|Views;foo|bar;../x=y|Z", PilotRoot, GlobalRoot).Count,
             "malformed config yields no routes")
+
+        Dim pilotPath As String = Nothing
+        AssertTrue(
+            PilotPolicy.TryResolvePilotPathByCanonical("/admin/admin/views.asp", RoutesConfig, PilotRoot, GlobalRoot, pilotPath),
+            "canonical views path resolves to a pilot route")
+        AssertEqual("/dev/adminshell/views.asp", pilotPath, "views canonical path maps to the pilot copy")
+
+        AssertTrue(
+            PilotPolicy.TryResolvePilotPathByCanonical(
+                "/admin/admin/cgi-bin/accessadmin.pl",
+                RoutesConfig,
+                PilotRoot,
+                GlobalRoot,
+                pilotPath),
+            "access manager canonical path resolves to a pilot route")
+        AssertEqual(
+            "/dev/adminshell/managed/access-manager/index.html",
+            pilotPath,
+            "access manager canonical path maps to the SPA entry")
     End Sub
 
     Private Sub TestReturnUrls()

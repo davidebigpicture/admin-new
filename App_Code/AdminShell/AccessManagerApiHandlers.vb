@@ -34,6 +34,7 @@ Public Class AccessManagerSessionHandler
             End If
 
             Dim capabilities = AccessManagerAccess.GetCapabilities(user)
+            Dim sections = PilotJsonApi.LoadMenuSections(user)
             PilotJsonApi.WriteJson(
                 context,
                 200,
@@ -41,28 +42,14 @@ Public Class AccessManagerSessionHandler
                     {"userName", user.UserName},
                     {"memberId", user.MemberId},
                     {"capabilities", PilotJsonApi.SerializeCapabilities(capabilities)},
-                    {"menuSections", LoadMenuSections(user)},
+                    {"menuSections", PilotJsonApi.SerializeMenuSections(sections)},
                     {"csrfToken", PilotJsonApi.IssueCsrfToken(context)},
-                    {"paths", New Dictionary(Of String, Object) From {
-                        {"pilotRoot", PilotConfig.PilotRootPath},
-                        {"globalAdminRoot", PilotConfig.GlobalAdminRootPath},
-                        {"loginUrl", PilotConfig.LoginUrl},
-                        {"logoutUrl", PilotConfig.LogoutUrl},
-                        {"routes", PilotJsonApi.SerializeRoutes()}
-                    }}
+                    {"paths", PilotJsonApi.SerializeShellPaths()}
                 })
         Catch ex As Exception
             PilotJsonApi.HandleServiceException(context, ex)
         End Try
     End Sub
-
-    Private Shared Function LoadMenuSections(user As PilotUser) As IList(Of PilotMenuSection)
-        Try
-            Return New PilotRepository().ListMenuSections(user.MemberId)
-        Catch
-            Return New List(Of PilotMenuSection)()
-        End Try
-    End Function
 
     Public ReadOnly Property IsReusable As Boolean Implements IHttpHandler.IsReusable
         Get

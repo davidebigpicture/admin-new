@@ -37,7 +37,9 @@ Public Class PilotChromeHandler
                             context.Request.QueryString("title"),
                             requestedPath))
                 Case "footer"
-                    context.Response.Write(PilotShell.RenderFooter())
+                    context.Response.Write(
+                        PilotShell.RenderFooter(
+                            context.Request.QueryString("script")))
                 Case Else
                     Deny(context, 400)
             End Select
