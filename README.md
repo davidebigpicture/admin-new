@@ -9,15 +9,19 @@ Before continuing work, also read
 [`docs/agent-handoff.md`](docs/agent-handoff.md) for environment boundaries,
 known constraints, the tool-migration checklist, and pending remote tests.
 
+Plans and status:
+
+- [`docs/shell-unification-plan.md`](docs/shell-unification-plan.md) — unify
+  Access Manager and Classic ASP chrome (next wave).
+- [`docs/github-repo.md`](docs/github-repo.md) — GitHub repo layout and deploy notes.
+
 ## IIS layout
 
 - `/dev/adminshell` remains inside the existing WVBPS front-end application.
 - The managed endpoints inherit the parent .NET Framework 4.8 configuration.
 - Shared pilot VB classes live in the application-root
-  `A:\wvbps\www\html\App_Code\AdminShell` folder when deployed to IIS.
-  This repository also keeps a copy under `App_Code/AdminShell/` for version
-  control; deploy those files to the application-root `App_Code\AdminShell`
-  folder (flat — no nested subfolders).
+  `A:\wvbps\www\html\App_Code\AdminShell` folder, nested as
+  `Core/`, `Auth/`, `Shell/`, and `AccessManager/`.
 - `managed\web.config` contains only pilot app settings; it must not contain
   application-level sections such as `authentication`, `compilation`, or
   `sessionState`.

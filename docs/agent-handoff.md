@@ -3,7 +3,9 @@
 Last updated: July 17, 2026
 
 This file is the operational handoff for the next agent. Read it with
-`managed-admin-shell-plan.md` before changing the pilot.
+[`managed-admin-shell-plan.md`](managed-admin-shell-plan.md),
+[`shell-unification-plan.md`](shell-unification-plan.md), and
+[`github-repo.md`](github-repo.md) before changing the pilot.
 
 ## Non-negotiable boundaries
 

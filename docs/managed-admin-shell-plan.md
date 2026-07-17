@@ -58,6 +58,8 @@ Completed:
 
 Still required:
 
+- **Shell unification** — see [`shell-unification-plan.md`](shell-unification-plan.md).
+  Give Classic ASP pilot tools the same left nav and chrome as Access Manager.
 - Run the database smoke test on a server with the WVBPS ODBC DSN.
 - Complete browser testing of login, ACL denial, logout, Views and log-tool
   actions, inline Ajax edits where applicable, timeout, and shell markup.
