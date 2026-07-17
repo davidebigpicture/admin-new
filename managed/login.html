@@ -1,0 +1,181 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="robots" content="noindex,nofollow">
+    <title>Admin Shell Sign In</title>
+    <style>
+        :root {
+            color-scheme: light;
+            font-family: Arial, Helvetica, sans-serif;
+            line-height: 1.5;
+        }
+
+        * {
+            box-sizing: border-box;
+        }
+
+        body {
+            min-height: 100vh;
+            margin: 0;
+            padding: 2rem 1rem;
+            background: #f1f1f1;
+            color: #202020;
+        }
+
+        .login-card {
+            width: min(100%, 28rem);
+            margin: 8vh auto 0;
+            padding: 1.75rem;
+            background: #fff;
+            border: 1px solid #c8c8c8;
+            box-shadow: 0 .25rem 1rem rgb(0 0 0 / 8%);
+        }
+
+        .pilot-label {
+            margin: 0;
+            color: #745a23;
+            font-size: .78rem;
+            font-weight: 700;
+            letter-spacing: .08em;
+            text-transform: uppercase;
+        }
+
+        h1 {
+            margin: .25rem 0 .5rem;
+            font-size: 1.5rem;
+        }
+
+        .intro {
+            margin: 0 0 1.25rem;
+        }
+
+        .field {
+            margin-bottom: 1rem;
+        }
+
+        label {
+            display: block;
+            margin-bottom: .35rem;
+            font-weight: 700;
+        }
+
+        input {
+            width: 100%;
+            min-height: 2.75rem;
+            padding: .6rem .7rem;
+            border: 1px solid #767676;
+            border-radius: 2px;
+            color: #202020;
+            font: inherit;
+        }
+
+        input:focus,
+        button:focus-visible {
+            outline: 3px solid #ffbf47;
+            outline-offset: 2px;
+        }
+
+        .password-field {
+            position: relative;
+        }
+
+        .password-field input {
+            padding-right: 3rem;
+        }
+
+        .password-toggle {
+            position: absolute;
+            top: 50%;
+            right: .25rem;
+            width: 2.4rem;
+            height: 2.4rem;
+            padding: .45rem;
+            transform: translateY(-50%);
+            border: 0;
+            background: transparent;
+            color: #444;
+            cursor: pointer;
+        }
+
+        .password-toggle:hover {
+            color: #0b3f8c;
+        }
+
+        .password-toggle svg {
+            display: block;
+            width: 100%;
+            height: 100%;
+        }
+
+        .error {
+            margin: 0 0 1rem;
+            padding: .75rem;
+            border: 1px solid #a94442;
+            background: #f2dede;
+            color: #7d2523;
+        }
+
+        .login-button {
+            min-height: 2.75rem;
+            padding: .65rem 1rem;
+            border: 1px solid #12396f;
+            border-radius: 2px;
+            background: #174a91;
+            color: #fff;
+            font: inherit;
+            font-weight: 700;
+            cursor: pointer;
+        }
+
+        .login-button:hover {
+            background: #103769;
+        }
+
+        .login-button:disabled {
+            cursor: wait;
+            opacity: .65;
+        }
+    </style>
+    <script src="login.js" defer></script>
+</head>
+<body>
+    <main>
+        <form id="loginForm" class="login-card" autocomplete="on">
+            <p class="pilot-label">Private pilot</p>
+            <h1>Admin shell sign in</h1>
+            <p class="intro">This route is isolated from the existing administrator login.</p>
+
+            <p id="errorMessage" class="error" role="alert" aria-live="assertive" hidden></p>
+
+            <div class="field">
+                <label for="userName">Username</label>
+                <input id="userName" name="userName" type="text" autocomplete="username"
+                       maxlength="255" required autofocus>
+            </div>
+
+            <div class="field">
+                <label for="password">Password</label>
+                <div class="password-field">
+                    <input id="password" name="password" type="password"
+                           autocomplete="current-password" maxlength="255" required>
+                    <button id="passwordToggle" class="password-toggle" type="button"
+                            aria-label="Show password" aria-pressed="false">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                             stroke-width="2" stroke-linecap="round" stroke-linejoin="round"
+                             aria-hidden="true" focusable="false">
+                            <path d="M2 12s3.5-6 10-6 10 6 10 6-3.5 6-10 6S2 12 2 12z"></path>
+                            <circle cx="12" cy="12" r="2.5"></circle>
+                            <line id="passwordSlash" x1="4" y1="4" x2="20" y2="20"></line>
+                        </svg>
+                    </button>
+                </div>
+            </div>
+
+            <button id="loginButton" class="login-button" type="submit" disabled>Sign in</button>
+            <noscript><p class="error">JavaScript is required to use this sign-in page.</p></noscript>
+        </form>
+    </main>
+</body>
+</html>
