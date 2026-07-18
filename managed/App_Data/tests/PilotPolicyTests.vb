@@ -10,7 +10,8 @@ Module PilotPolicyTests
         "loginlog.asp=loginlog.asp|Login Log;" &
         "sql_logs.asp=sql_logs.asp|SQL Logs;" &
         "sms_logs.asp=sms_logs.asp|SMS Logs;" &
-        "managed/access-manager/index.html=cgi-bin/accessadmin.pl|Access Manager"
+        "managed/access-manager/index.html=cgi-bin/accessadmin.pl|Access Manager;" &
+        "managed/code-admin/index.aspx=cgi-bin/codeadminO.pl|Code Admin"
 
     Function Main() As Integer
         TestAllowedHost()
@@ -78,6 +79,16 @@ Module PilotPolicyTests
                 canonicalPath),
             "access manager SPA is a configured pilot route")
         AssertEqual("/admin/admin/cgi-bin/accessadmin.pl", canonicalPath, "access manager maps to accessadmin ACL")
+
+        AssertTrue(
+            PilotPolicy.TryResolveCanonicalPath(
+                "/dev/adminshell/managed/code-admin/index.aspx",
+                RoutesConfig,
+                PilotRoot,
+                GlobalRoot,
+                canonicalPath),
+            "code admin aspx is a configured pilot route")
+        AssertEqual("/admin/admin/cgi-bin/codeadminO.pl", canonicalPath, "code admin maps to codeadminO ACL")
 
         AssertTrue(
             PilotPolicy.TryResolveRoute("/Dev/AdminShell/LoginLog.asp", RoutesConfig, PilotRoot, GlobalRoot, route),

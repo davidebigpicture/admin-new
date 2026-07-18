@@ -11,11 +11,6 @@ Public Class AccessManagerSessionHandler
     Public Sub ProcessRequest(context As HttpContext) Implements IHttpHandler.ProcessRequest
         PilotJsonApi.PrepareJsonResponse(context)
 
-        If Not PilotConfig.IsEnabledForHost(context.Request.Url.Host) Then
-            PilotJsonApi.WriteError(context, 404, "Not found.", Nothing)
-            Return
-        End If
-
         If Not String.Equals(context.Request.HttpMethod, "GET", StringComparison.OrdinalIgnoreCase) Then
             context.Response.AppendHeader("Allow", "GET")
             PilotJsonApi.WriteError(context, 405, "Only GET is supported.", Nothing)
@@ -24,12 +19,7 @@ Public Class AccessManagerSessionHandler
 
         Try
             Dim user As PilotUser = Nothing
-            If Not PilotJsonApi.RequireUser(context, user) Then
-                Return
-            End If
-
-            If Not PilotJsonApi.CanUseAccessManager(user) Then
-                PilotJsonApi.WriteError(context, 403, "You do not have permission to use Access Manager.", PilotJsonApi.IssueCsrfToken(context))
+            If Not AccessManagerApiGuard.RequireAuthorized(context, user) Then
                 Return
             End If
 
@@ -73,7 +63,7 @@ Public Class AccessManagerWorkspaceHandler
 
         Try
             Dim user As PilotUser = Nothing
-            If Not PilotJsonApi.RequireUser(context, user) Then
+            If Not AccessManagerApiGuard.RequireAuthorized(context, user) Then
                 Return
             End If
 
@@ -147,7 +137,7 @@ Public Class AccessManagerSectionsHandler
     Private Shared Sub HandleGet(context As HttpContext)
         Try
             Dim user As PilotUser = Nothing
-            If Not PilotJsonApi.RequireUser(context, user) Then
+            If Not AccessManagerApiGuard.RequireAuthorized(context, user) Then
                 Return
             End If
 
@@ -170,13 +160,9 @@ Public Class AccessManagerSectionsHandler
     End Sub
 
     Private Shared Sub HandlePost(context As HttpContext)
-        If Not PilotJsonApi.RequireCsrf(context) Then
-            Return
-        End If
-
         Try
             Dim user As PilotUser = Nothing
-            If Not PilotJsonApi.RequireUser(context, user) Then
+            If Not AccessManagerApiGuard.RequireAuthorizedMutation(context, user) Then
                 Return
             End If
 
@@ -257,7 +243,7 @@ Public Class AccessManagerScriptsHandler
     Private Shared Sub HandleGet(context As HttpContext)
         Try
             Dim user As PilotUser = Nothing
-            If Not PilotJsonApi.RequireUser(context, user) Then
+            If Not AccessManagerApiGuard.RequireAuthorized(context, user) Then
                 Return
             End If
 
@@ -293,13 +279,9 @@ Public Class AccessManagerScriptsHandler
     End Sub
 
     Private Shared Sub HandlePost(context As HttpContext)
-        If Not PilotJsonApi.RequireCsrf(context) Then
-            Return
-        End If
-
         Try
             Dim user As PilotUser = Nothing
-            If Not PilotJsonApi.RequireUser(context, user) Then
+            If Not AccessManagerApiGuard.RequireAuthorizedMutation(context, user) Then
                 Return
             End If
 
@@ -358,7 +340,7 @@ Public Class AccessManagerPrincipalsHandler
 
         Try
             Dim user As PilotUser = Nothing
-            If Not PilotJsonApi.RequireUser(context, user) Then
+            If Not AccessManagerApiGuard.RequireAuthorized(context, user) Then
                 Return
             End If
 
@@ -414,7 +396,7 @@ Public Class AccessManagerGrantsHandler
     Private Shared Sub HandleGet(context As HttpContext)
         Try
             Dim user As PilotUser = Nothing
-            If Not PilotJsonApi.RequireUser(context, user) Then
+            If Not AccessManagerApiGuard.RequireAuthorized(context, user) Then
                 Return
             End If
 
@@ -478,13 +460,9 @@ Public Class AccessManagerGrantsHandler
     End Sub
 
     Private Shared Sub HandlePost(context As HttpContext)
-        If Not PilotJsonApi.RequireCsrf(context) Then
-            Return
-        End If
-
         Try
             Dim user As PilotUser = Nothing
-            If Not PilotJsonApi.RequireUser(context, user) Then
+            If Not AccessManagerApiGuard.RequireAuthorizedMutation(context, user) Then
                 Return
             End If
 

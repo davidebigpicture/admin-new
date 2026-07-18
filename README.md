@@ -42,12 +42,17 @@ Copied pilot tools:
 | `/dev/adminshell/sql_logs.asp` | `/admin/admin/sql_logs.asp` |
 | `/dev/adminshell/sms_logs.asp` | `/admin/admin/sms_logs.asp` |
 | `/dev/adminshell/managed/access-manager/index.html` | `/admin/admin/cgi-bin/accessadmin.pl` |
+| `/dev/adminshell/managed/code-admin/index.aspx` | `/admin/admin/cgi-bin/codeadminO.pl` |
 
 Access Manager SPA:
 
 `https://dev.services.wvbps.wv.gov/dev/adminshell/managed/access-manager/index.html`
 
-The SPA uses document-relative JSON APIs under `managed/access-manager/api/`
+Code Admin (.NET rewrite of `codeadminO.pl`):
+
+`https://dev.services.wvbps.wv.gov/dev/adminshell/managed/code-admin/index.aspx`
+
+The Access Manager SPA uses document-relative JSON APIs under `managed/access-manager/api/`
 and shared shell assets under `managed/shared/`. It now uses one section-centered
 workspace: section names and assigned scripts are editable inline, script CRUD
 is available from the section, and modal lookups replace raw script/principal
@@ -85,6 +90,10 @@ insensitive matching), return URL validation, and hash comparison.
 rules with an in-memory repository fake.
 `managed/App_Data/tests/AccessManagerStateTests.js` covers pure client reorder
 helpers (`node AccessManagerStateTests.js` when Node is available).
+Code Admin tests: `CodeAdminViewModelTests.js`, `CodeAdminWorkspaceUiTests.js`,
+`CodeAdminValidationTests.vb`, `CodeAdminServiceTests.vb`, and
+`Test-CodeAdminBrowser.ps1`. See [`docs/agent-handoff.md`](docs/agent-handoff.md)
+for Code Admin status, Oracle connection requirements, and UI styling notes.
 `managed/App_Data/tests/Test-PilotData.ps1` verifies the pilot user and
 canonical Views ACL when run on a machine with the WVBPS ODBC DSN.
 `managed/App_Data/tests/Test-AccessManagerData.ps1` verifies the pilot user

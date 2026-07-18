@@ -1,0 +1,279 @@
+Imports System
+Imports System.Collections.Generic
+Imports System.Globalization
+Imports System.Web
+Imports System.Web.SessionState
+
+Public Class CodeAdminPage
+    Inherits System.Web.UI.Page
+
+    Protected Sub Page_Load(sender As Object, e As EventArgs) Handles Me.Load
+        If Not PilotConfig.IsEnabledForHost(Request.Url.Host) Then
+            Response.StatusCode = 404
+            Response.TrySkipIisCustomErrors = True
+            Response.End()
+            Return
+        End If
+
+        Dim user As PilotUser = Nothing
+        If Not PilotAuth.TryGetCurrentUser(Context, user) Then
+            Dim returnUrl = HttpUtility.UrlEncode(Request.Url.PathAndQuery)
+            Response.Redirect(PilotConfig.LoginUrl & "?returnUrl=" & returnUrl, False)
+            Context.ApplicationInstance.CompleteRequest()
+            Return
+        End If
+
+        If Not CodeAdminAccess.CanOpenApp(user) Then
+            Response.StatusCode = 403
+            Response.TrySkipIisCustomErrors = True
+            Response.ContentType = "text/html"
+            Response.Write("<p>You do not have permission to use Code Admin.</p>")
+            Response.End()
+        End If
+    End Sub
+End Class
+
+Public Class CodeAdminSessionHandler
+    Implements IHttpHandler
+    Implements IRequiresSessionState
+
+    Public Sub ProcessRequest(context As HttpContext) Implements IHttpHandler.ProcessRequest
+        PilotJsonApi.PrepareJsonResponse(context)
+
+        If Not String.Equals(context.Request.HttpMethod, "GET", StringComparison.OrdinalIgnoreCase) Then
+            context.Response.AppendHeader("Allow", "GET")
+            PilotJsonApi.WriteError(context, 405, "Only GET is supported.", Nothing)
+            Return
+        End If
+
+        Try
+            Dim user As PilotUser = Nothing
+            If Not CodeAdminApiGuard.RequireAuthorized(context, user) Then
+                Return
+            End If
+
+            Dim sections = PilotJsonApi.LoadMenuSections(user)
+            PilotJsonApi.WriteJson(
+                context,
+                200,
+                New Dictionary(Of String, Object) From {
+                    {"userName", user.UserName},
+                    {"memberId", user.MemberId},
+                    {"csrfToken", PilotJsonApi.IssueCsrfToken(context)},
+                    {"menuSections", PilotJsonApi.SerializeMenuSections(sections)},
+                    {"paths", PilotJsonApi.SerializeShellPaths()}
+                })
+        Catch ex As Exception
+            PilotJsonApi.HandleServiceException(context, ex)
+        End Try
+    End Sub
+
+    Public ReadOnly Property IsReusable As Boolean Implements IHttpHandler.IsReusable
+        Get
+            Return False
+        End Get
+    End Property
+End Class
+
+Public Class CodeAdminWorkspaceHandler
+    Implements IHttpHandler
+    Implements IRequiresSessionState
+
+    Public Sub ProcessRequest(context As HttpContext) Implements IHttpHandler.ProcessRequest
+        PilotJsonApi.PrepareJsonResponse(context)
+
+        If Not String.Equals(context.Request.HttpMethod, "GET", StringComparison.OrdinalIgnoreCase) Then
+            context.Response.AppendHeader("Allow", "GET")
+            PilotJsonApi.WriteError(context, 405, "Only GET is supported.", Nothing)
+            Return
+        End If
+
+        Try
+            Dim user As PilotUser = Nothing
+            If Not CodeAdminApiGuard.RequireAuthorized(context, user) Then
+                Return
+            End If
+
+            Dim service As New CodeAdminService(user)
+            PilotJsonApi.WriteJson(context, 200, SerializeWorkspace(service.GetWorkspace()))
+        Catch ex As Exception
+            PilotJsonApi.HandleServiceException(context, ex)
+        End Try
+    End Sub
+
+    Private Shared Function SerializeWorkspace(workspace As CodeAdminWorkspace) As Dictionary(Of String, Object)
+        Dim classes As New List(Of Dictionary(Of String, Object))()
+        Dim classIndex As Integer
+        For classIndex = 0 To workspace.Classes.Count - 1
+            Dim item = workspace.Classes(classIndex)
+            classes.Add(New Dictionary(Of String, Object) From {
+                {"codeClass", item.CodeClass},
+                {"codeClassDesc", item.CodeClassDesc},
+                {"edit", item.Edit}
+            })
+        Next
+
+        Return New Dictionary(Of String, Object) From {
+            {"classes", classes},
+            {"defaultCodeClass", workspace.DefaultCodeClass},
+            {"showClassCodes", workspace.ShowClassCodes}
+        }
+    End Function
+
+    Public ReadOnly Property IsReusable As Boolean Implements IHttpHandler.IsReusable
+        Get
+            Return False
+        End Get
+    End Property
+End Class
+
+Public Class CodeAdminValuesHandler
+    Implements IHttpHandler
+    Implements IRequiresSessionState
+
+    Public Sub ProcessRequest(context As HttpContext) Implements IHttpHandler.ProcessRequest
+        PilotJsonApi.PrepareJsonResponse(context)
+
+        Select Case context.Request.HttpMethod.ToUpperInvariant()
+            Case "GET"
+                HandleGet(context)
+            Case "POST"
+                HandlePost(context)
+            Case Else
+                context.Response.AppendHeader("Allow", "GET, POST")
+                PilotJsonApi.WriteError(context, 405, "Only GET and POST are supported.", Nothing)
+        End Select
+    End Sub
+
+    Private Shared Sub HandleGet(context As HttpContext)
+        Try
+            Dim user As PilotUser = Nothing
+            If Not CodeAdminApiGuard.RequireAuthorized(context, user) Then
+                Return
+            End If
+
+            Dim service As New CodeAdminService(user)
+            Dim codeClass = If(context.Request.QueryString("codeClass"), String.Empty).Trim()
+            Dim search = If(context.Request.QueryString("search"), String.Empty).Trim()
+            Dim start = ParsePositiveInt(context.Request.QueryString("start"), 0)
+            Dim pageSize = ParsePositiveInt(context.Request.QueryString("rows"), CodeAdminConstants.DefaultPageSize)
+            If pageSize <= 0 Then
+                pageSize = CodeAdminConstants.DefaultPageSize
+            End If
+
+            Dim idValue = context.Request.QueryString("id")
+            Dim codeValueId As Integer
+            If Integer.TryParse(idValue, NumberStyles.None, CultureInfo.InvariantCulture, codeValueId) AndAlso codeValueId > 0 Then
+                PilotJsonApi.WriteJson(context, 200, SerializeValue(service.GetValue(codeValueId)))
+                Return
+            End If
+
+            PilotJsonApi.WriteJson(context, 200, SerializeValuePage(service.ListValues(codeClass, search, start, pageSize)))
+        Catch ex As Exception
+            PilotJsonApi.HandleServiceException(context, ex)
+        End Try
+    End Sub
+
+    Private Shared Sub HandlePost(context As HttpContext)
+        Try
+            Dim user As PilotUser = Nothing
+            If Not CodeAdminApiGuard.RequireAuthorizedMutation(context, user) Then
+                Return
+            End If
+
+            Dim service As New CodeAdminService(user)
+            Dim action = If(context.Request.QueryString("action"), String.Empty).Trim().ToLowerInvariant()
+
+            Select Case action
+                Case "create"
+                    Dim body = PilotJsonApi.ReadJsonBody(Of CreateCodeValueCommand)(context)
+                    PilotJsonApi.WriteJson(context, 200, SerializeValue(service.CreateValue(body)))
+                Case "update"
+                    Dim body = PilotJsonApi.ReadJsonBody(Of UpdateCodeValueCommand)(context)
+                    PilotJsonApi.WriteJson(context, 200, SerializeValue(service.UpdateValue(body)))
+                Case "patch"
+                    Dim body = PilotJsonApi.ReadJsonBody(Of PatchCodeValueCommand)(context)
+                    PilotJsonApi.WriteJson(context, 200, SerializeValue(service.PatchValue(body)))
+                Case "delete"
+                    Dim body = PilotJsonApi.ReadJsonBody(Of DeleteCodeValuesCommand)(context)
+                    PilotJsonApi.WriteJson(context, 200, SerializeDeleteResults(service.DeleteValues(body)))
+                Case "activate"
+                    Dim body = PilotJsonApi.ReadJsonBody(Of CodeValueLifecycleCommand)(context)
+                    service.ActivateValue(body)
+                    PilotJsonApi.WriteJson(context, 200, New Dictionary(Of String, Object) From {{"updated", True}})
+                Case "deactivate"
+                    Dim body = PilotJsonApi.ReadJsonBody(Of CodeValueLifecycleCommand)(context)
+                    service.DeactivateValue(body)
+                    PilotJsonApi.WriteJson(context, 200, New Dictionary(Of String, Object) From {{"updated", True}})
+                Case "position"
+                    Dim body = PilotJsonApi.ReadJsonBody(Of CodeValuePositionCommand)(context)
+                    service.SetPosition(body)
+                    PilotJsonApi.WriteJson(context, 200, New Dictionary(Of String, Object) From {{"updated", True}})
+                Case Else
+                    Throw New AccessManagerValidationException("Action is not supported.")
+            End Select
+        Catch ex As Exception
+            PilotJsonApi.HandleServiceException(context, ex)
+        End Try
+    End Sub
+
+    Private Shared Function ParsePositiveInt(value As String, fallback As Integer) As Integer
+        Dim parsed As Integer
+        If Integer.TryParse(value, NumberStyles.None, CultureInfo.InvariantCulture, parsed) Then
+            Return parsed
+        End If
+        Return fallback
+    End Function
+
+    Private Shared Function SerializeValuePage(page As CodeAdminValuePage) As Dictionary(Of String, Object)
+        Dim items As New List(Of Dictionary(Of String, Object))()
+        Dim itemIndex As Integer
+        For itemIndex = 0 To page.Items.Count - 1
+            items.Add(SerializeValue(page.Items(itemIndex)))
+        Next
+
+        Return New Dictionary(Of String, Object) From {
+            {"items", items},
+            {"totalCount", page.TotalCount},
+            {"start", page.Start},
+            {"pageSize", page.PageSize},
+            {"canDelete", page.CanDelete}
+        }
+    End Function
+
+    Private Shared Function SerializeValue(value As CodeAdminValue) As Dictionary(Of String, Object)
+        Return New Dictionary(Of String, Object) From {
+            {"codeValueId", value.CodeValueId},
+            {"codeClass", value.CodeClass},
+            {"codeValue", value.CodeValue},
+            {"codeValueDesc", value.CodeValueDesc},
+            {"codeValueLongDesc", value.CodeValueLongDesc},
+            {"inactive", value.Inactive},
+            {"majorCode", value.MajorCode},
+            {"minorCode", value.MinorCode},
+            {"orderBy", value.OrderBy},
+            {"formDisplay", value.FormDisplay},
+            {"isProtected", value.IsProtected}
+        }
+    End Function
+
+    Private Shared Function SerializeDeleteResults(results As IList(Of CodeAdminDeleteResult)) As Dictionary(Of String, Object)
+        Dim payload As New List(Of Dictionary(Of String, Object))()
+        Dim resultIndex As Integer
+        For resultIndex = 0 To results.Count - 1
+            Dim result = results(resultIndex)
+            payload.Add(New Dictionary(Of String, Object) From {
+                {"deleted", result.Deleted},
+                {"skippedInUse", result.SkippedInUse},
+                {"message", result.Message}
+            })
+        Next
+        Return New Dictionary(Of String, Object) From {{"results", payload}}
+    End Function
+
+    Public ReadOnly Property IsReusable As Boolean Implements IHttpHandler.IsReusable
+        Get
+            Return False
+        End Get
+    End Property
+End Class

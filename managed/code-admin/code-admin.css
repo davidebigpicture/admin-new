@@ -1,0 +1,134 @@
+#codeAdminApp .workspace-heading {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+    margin-bottom: 1rem;
+}
+
+#codeAdminApp .workspace-heading h2,
+#codeAdminApp .workspace-heading p {
+    margin: 0;
+}
+
+#codeAdminApp .toolbar {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.75rem;
+    align-items: end;
+    margin-bottom: 1rem;
+}
+
+#codeAdminApp .toolbar label {
+    display: grid;
+    gap: 0.25rem;
+    font-size: 0.85rem;
+    color: var(--shell-muted);
+}
+
+#codeAdminApp .toolbar input,
+#codeAdminApp .toolbar select {
+    min-width: 12rem;
+}
+
+#codeAdminApp .actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    margin-bottom: 1rem;
+}
+
+#codeAdminApp table {
+    width: 100%;
+    border-collapse: collapse;
+}
+
+#codeAdminApp th,
+#codeAdminApp td {
+    padding: 0.55rem 0.65rem;
+    border-bottom: 1px solid #e1e7ef;
+    text-align: left;
+    vertical-align: top;
+}
+
+#codeAdminApp th {
+    background: #f8fafc;
+    font-size: 0.85rem;
+}
+
+#codeAdminApp tr.inactive td {
+    color: #64748b;
+    background: #f8fafc;
+}
+
+#codeAdminApp .code-value {
+    font-weight: 600;
+}
+
+#codeAdminApp .long-desc {
+    color: var(--shell-muted);
+    font-size: 0.85rem;
+}
+
+#codeAdminApp .inline-edit {
+    border: 1px dashed #cbd5e1;
+    border-radius: 0.35rem;
+    padding: 0.15rem 0.35rem;
+    min-width: 6rem;
+}
+
+#codeAdminApp .inline-edit:focus {
+    outline: 2px solid #93c5fd;
+    border-color: #60a5fa;
+}
+
+#codeAdminApp .pagination {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    margin-top: 1rem;
+}
+
+#codeAdminApp .editor-panel {
+    margin-top: 1rem;
+    padding: 1rem;
+    border: 1px solid #e1e7ef;
+    border-radius: var(--shell-radius);
+    background: #f8fafc;
+}
+
+#codeAdminApp .editor-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+    gap: 0.75rem;
+}
+
+#codeAdminApp .editor-grid label {
+    display: grid;
+    gap: 0.25rem;
+    font-size: 0.85rem;
+}
+
+#codeAdminApp .editor-actions {
+    display: flex;
+    gap: 0.5rem;
+    margin-top: 1rem;
+}
+
+#codeAdminApp .status-pill {
+    display: inline-block;
+    padding: 0.15rem 0.5rem;
+    border-radius: 999px;
+    font-size: 0.75rem;
+    font-weight: 600;
+}
+
+#codeAdminApp .status-pill.active {
+    background: #dcfce7;
+    color: #166534;
+}
+
+#codeAdminApp .status-pill.inactive {
+    background: #fee2e2;
+    color: #991b1b;
+}

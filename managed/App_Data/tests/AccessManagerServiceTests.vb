@@ -7,6 +7,7 @@ Module AccessManagerServiceTests
     Function Main() As Integer
         TestValidationRejectsBlankSectionName()
         TestCapabilityDenyForSections()
+        TestServiceRejectsNoCapabilities()
         TestConcurrencyOnSectionUpdate()
         TestGrantCreateDedupesInactiveRow()
         TestPrincipalGrantLookup()
@@ -45,6 +46,24 @@ Module AccessManagerServiceTests
         AssertThrows(Of AccessManagerForbiddenException)(
             Sub() service.ListSections(False),
             "section list requires section capability")
+    End Sub
+
+    Private Sub TestServiceRejectsNoCapabilities()
+        Try
+            Dim service = New AccessManagerService(
+                New PilotUser With {
+                    .MemberId = 1001,
+                    .UserName = "tester"
+                },
+                New FakeAccessManagerRepository(),
+                AccessManagerCapabilities.DenyAll(),
+                False)
+            Fail("service rejects users with no access manager permissions")
+        Catch ex As AccessManagerForbiddenException
+            Pass("service rejects users with no access manager permissions")
+        Catch ex As Exception
+            Fail("service rejects users with no access manager permissions (threw " & ex.GetType().Name & ")")
+        End Try
     End Sub
 
     Private Sub TestConcurrencyOnSectionUpdate()

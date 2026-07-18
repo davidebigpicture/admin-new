@@ -1,0 +1,47 @@
+---
+description: Browser verification protocol when cursor-ide-browser MCP is available
+alwaysApply: true
+---
+
+# Browser E2E protocol
+
+Use this whenever verifying a web UI, SPA, or `.ashx` API in the pilot shell.
+
+## Before you say "open the browser"
+
+1. Call `GetMcpTools` or try `browser_navigate` on server `cursor-ide-browser`.
+2. If the MCP is missing, **stop and tell the user** how to enable Browser Automation (Settings → Tools & MCP → Browser Tab). Do **not** use `Start-Process` or the system browser as a substitute.
+3. If blocked, state the blocker in the first reply — never silently fall back.
+
+## Active session workflow
+
+1. `browser_navigate` → target URL (include `returnUrl` when testing post-login flows).
+2. `browser_lock` before a multi-step interaction; `browser_unlock` when done.
+3. **Poll** with `browser_snapshot` while the user logs in or acts — do not wait for "I'm done". Don't poll for more than one minute, because that wastes tokens. If the user doesn't login within the minute, tell the user you're waiting for login and they should say "I'm done" when ready to proceed.
+4. On empty UI, error banners, or missing data → **immediately** inspect APIs via `browser_cdp`:
+
+```javascript
+fetch('api/workspace.ashx').then(async r => ({
+  status: r.status,
+  body: await r.text()
+}))
+```
+
+5. Report **HTTP status + response body** for failing requests. Screenshot/snapshot alone is not enough.
+
+## Tool choice
+
+| Need | Tool |
+|------|------|
+| Page structure, buttons, forms | `browser_snapshot` |
+| Visual confirmation | `browser_take_screenshot` |
+| XHR status/body, DOM probes | `browser_cdp` (`Runtime.evaluate`) |
+| Clicks, typing | `browser_click`, `browser_fill`, `browser_type` |
+
+`browser_network_requests` / `browser_console_messages` may be unavailable; use CDP instead.
+
+## Pilot URLs (WVBPS dev)
+
+- Login: `https://dev.services.wvbps.wv.gov/dev/adminshell/managed/login.html`
+- Code Admin: `.../managed/code-admin/index.aspx`
+- Access Manager: `.../managed/access-manager/index.html`

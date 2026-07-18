@@ -21,6 +21,10 @@ Public Class AccessManagerService
         _repository = If(repository, New AccessManagerRepository())
         _capabilities = If(capabilities, AccessManagerCapabilityResolver.Resolve(user.MemberId))
         _canOpenApp = canOpenApp OrElse AccessManagerAccess.CanOpenApp(user)
+
+        If Not _canOpenApp AndAlso Not _capabilities.CanReadWorkspace() Then
+            Throw New AccessManagerForbiddenException("You do not have permission to use Access Manager.")
+        End If
     End Sub
 
     Public ReadOnly Property Capabilities As AccessManagerCapabilities

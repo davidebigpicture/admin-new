@@ -2,4 +2,6 @@
 <appSettings>
   <!-- Copy to web.config.local (gitignored). Same value as legacy CONF encryption_key. -->
   <add key="PilotMembershipEncryptionKey" value="" />
+  <!-- Org major_code for activate/deactivate/create (matches legacy Application("ORG_ID")). -->
+  <add key="CodeAdminMajorCode" value="" />
 </appSettings>
