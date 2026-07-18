@@ -43,7 +43,9 @@ ElseIf pilotAuthResult = "NOSESSION" Then
     If Request.QueryString <> "" Then
         pilotReturnUrl = pilotReturnUrl & "?" & Request.QueryString
     End If
-    Response.Redirect pilotManagedBase & "/login.html?returnUrl=" & Server.URLEncode(pilotReturnUrl)
+    ' Legacy auth cookies use Path=/admin and are not sent to /dev/adminshell.
+    ' Bridge through /admin/admin/pilot-bridge.asp where those cookies are available.
+    Response.Redirect Application("URL") & "/admin/admin/pilot-bridge.asp?returnUrl=" & Server.URLEncode(pilotReturnUrl)
 ElseIf pilotAuthResult = "DENY" Then
     Response.Status = "403 Forbidden"
     Response.Write "<div align=""center"">You are not authorized to access this admin shell tool.</div>"

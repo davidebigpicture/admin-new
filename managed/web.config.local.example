@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<appSettings>
+  <!-- Copy to web.config.local (gitignored). Same value as legacy CONF encryption_key. -->
+  <add key="PilotMembershipEncryptionKey" value="" />
+</appSettings>

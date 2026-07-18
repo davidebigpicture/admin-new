@@ -33,13 +33,17 @@ The repository contains:
 2. **`App_Code/AdminShell/`** — shared VB.NET classes. On IIS these deploy to
    the application-root `App_Code\AdminShell` folder (flat; no nested
    subfolders).
+3. **`App_Code/RedisService.vb` and `App_Code/RedisSession.vb`** — shared
+   StackExchange.Redis helpers (DAPE-derived, CacheManager-compatible). On IIS
+   these deploy to the application-root `App_Code\` folder beside any existing
+   site services such as `FormSessionService.vb`.
 
 ## Live vs repo layout
 
 | Environment | Pilot files | VB.NET classes |
 |-------------|-------------|----------------|
-| **IIS (live)** | `www/html/dev/adminshell/` | `www/html/App_Code/AdminShell/` |
-| **Git repo** | repo root | `App_Code/AdminShell/` |
+| **IIS (live)** | `www/html/dev/adminshell/` | `www/html/App_Code/AdminShell/` plus `www/html/App_Code/RedisService.vb` and `RedisSession.vb` |
+| **Git repo** | repo root | `App_Code/AdminShell/` plus `App_Code/RedisService.vb` and `RedisSession.vb` |
 
 **Workflow:** edit in `E:\web\repos\admin-new` → commit/push → copy/sync to
 mapped drive paths for remote IIS testing.

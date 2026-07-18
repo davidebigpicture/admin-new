@@ -131,7 +131,7 @@ Public Class PilotLoginHandler
 
             context.Session.Remove("PilotFailedAttempts")
             context.Session.Remove("PilotLoginCsrf")
-            PilotAuth.SignIn(context, user)
+            PilotAuth.SignIn(context, user, If(requestBody.Password, String.Empty))
 
             WriteJson(
                 context,

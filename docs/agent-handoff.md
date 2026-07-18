@@ -154,7 +154,13 @@ prevents a copied URL from bypassing the existing authorization model.
 - Confirm an unknown pilot route returns 404.
 - Test logout, expired cookie, session timeout, and safe return URLs.
 - Exercise Views inline edits and verify they still call the global
-  `/admin/admin/...` Ajax endpoint.
+  `/admin/admin/...` Ajax endpoint. After pilot login, `ajax.asp?action=session`
+  should return 200 (not 401) once the legacy session bridge is configured.
+- **Legacy session bridge:** pilot login writes CacheManager-compatible Redis keys
+  via `RedisSession` and sets `/admin` cookies. Membership cookie encryption is
+  native VB (`perl-crypt-cbc-blowfish` adapter). Set
+  `PilotMembershipEncryptionKey` to the legacy `encryption_key` value. See
+  `docs/legacy-credential-encoder.md`.
 - Check Login Log filtering/details, SQL Log list/file/detail, and SMS Log
   list/date/detail.
 - Confirm the legacy Perl login and global `/admin/admin/...` tools remain

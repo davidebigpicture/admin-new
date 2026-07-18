@@ -24,4 +24,11 @@ obj/
 .env.*
 *.pem
 web.config.local
+managed/web.config.local
+**/web.config.local
+!**/web.config.local.example
 **/secrets.*
+cgi-bin/pilot-perl-config.pl
+
+# Generated / scratch
+tmp/

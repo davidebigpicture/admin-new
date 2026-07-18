@@ -351,7 +351,7 @@ Public NotInheritable Class PilotAuth
         Return True
     End Function
 
-    Public Shared Sub SignIn(context As HttpContext, user As PilotUser)
+    Public Shared Sub SignIn(context As HttpContext, user As PilotUser, Optional password As String = Nothing)
         Dim cookiePath = PilotConfig.CookiePath
         Dim issued = DateTime.UtcNow
         Dim ticket As New FormsAuthenticationTicket(
@@ -364,6 +364,12 @@ Public NotInheritable Class PilotAuth
             cookiePath)
 
         WriteTicketCookie(context, ticket, cookiePath)
+
+        Try
+            PilotLegacySession.Ensure(context, user, password)
+        Catch ex As Exception
+            ' Pilot sign-in still succeeds when legacy credential encoding is unavailable.
+        End Try
     End Sub
 
     Public Shared Function TryGetCurrentUser(context As HttpContext, ByRef user As PilotUser) As Boolean
@@ -374,18 +380,18 @@ Public NotInheritable Class PilotAuth
 
         Dim cookie = context.Request.Cookies(CookieName)
         If cookie Is Nothing OrElse String.IsNullOrWhiteSpace(cookie.Value) Then
-            Return False
+            Return TrySignInFromLegacySession(context, user)
         End If
 
         Dim ticket As FormsAuthenticationTicket
         Try
             ticket = FormsAuthentication.Decrypt(cookie.Value)
         Catch ex As Exception
-            Return False
+            Return TrySignInFromLegacySession(context, user)
         End Try
 
         If ticket Is Nothing OrElse ticket.Expired OrElse Not PilotConfig.IsPilotUser(ticket.Name) Then
-            Return False
+            Return TrySignInFromLegacySession(context, user)
         End If
 
         Dim memberId As Integer
@@ -405,6 +411,11 @@ Public NotInheritable Class PilotAuth
             WriteTicketCookie(context, renewed, PilotConfig.CookiePath)
         End If
 
+        Try
+            PilotLegacySession.Refresh(context, user)
+        Catch ex As Exception
+        End Try
+
         Return True
     End Function
 
@@ -417,6 +428,7 @@ Public NotInheritable Class PilotAuth
             .SameSite = SameSiteMode.Lax
         }
         context.Response.Cookies.Add(expired)
+        PilotLegacySession.Clear(context)
     End Sub
 
     Public Shared Function IsSafeReturnUrl(returnUrl As String) As Boolean
@@ -425,6 +437,28 @@ Public NotInheritable Class PilotAuth
             PilotConfig.RoutesConfig,
             PilotConfig.PilotRootPath,
             PilotConfig.GlobalAdminRootPath)
+    End Function
+
+    Private Shared Function TrySignInFromLegacySession(context As HttpContext, ByRef user As PilotUser) As Boolean
+        user = Nothing
+        Dim loginName As String = Nothing
+        If Not PilotLegacySession.TryGetAuthenticatedLoginName(context, loginName) Then
+            Return False
+        End If
+
+        If Not PilotConfig.IsPilotUser(loginName) Then
+            Return False
+        End If
+
+        Dim repository As New PilotRepository()
+        user = repository.FindUserByName(loginName)
+        If user Is Nothing OrElse user.Inactive OrElse user.AccountLocked Then
+            user = Nothing
+            Return False
+        End If
+
+        SignIn(context, user, Nothing)
+        Return True
     End Function
 
     Private Shared Sub WriteTicketCookie(context As HttpContext, ticket As FormsAuthenticationTicket, cookiePath As String)
