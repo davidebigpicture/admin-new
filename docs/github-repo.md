@@ -28,8 +28,7 @@ git clone https://github.com/davidebigpicture/admin-new.git E:/web/repos/admin-n
 The repository contains:
 
 1. **Pilot tree** — Classic ASP tools, managed endpoints, Access Manager SPA,
-   shared shell assets, tests, and docs (mirrors
-   `A:\wvbps\www\html\dev\adminshell` on the server).
+   shared shell assets, tests, and docs (synced to each client's IIS path).
 2. **`App_Code/AdminShell/`** — shared VB.NET classes. On IIS these deploy to
    the application-root `App_Code\AdminShell` folder (flat; no nested
    subfolders).
@@ -56,11 +55,15 @@ slow and requires `safe.directory` workarounds there.
 Do not commit:
 
 - Production credentials or tokens
-- Local `web.config` overrides with secrets
+- `managed/web.config.local` (gitignored; holds `PilotMembershipEncryptionKey`)
 - `.env` files
 
-`managed/web.config` contains pilot **appSettings** only (hosts, route map,
-allowlist). Review before pushing if values are environment-specific.
+`managed/web.config` contains pilot **appSettings** only. Secrets load from
+`web.config.local` via `<appSettings file="web.config.local">`. Commit
+`web.config.local.example` with empty placeholders only.
+
+Git commits: see [`.cursor/skills/commit-mapped-drive/SKILL.md`](../.cursor/skills/commit-mapped-drive/SKILL.md)
+and [`admin-shell-platform.md`](admin-shell-platform.md).
 
 ## Agent reminder
 

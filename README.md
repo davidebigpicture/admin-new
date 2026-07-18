@@ -1,27 +1,30 @@
-# WVBPS Admin Shell Pilot
+# Admin Shell Pilot (`admin-new`)
 
-This is an unlinked, client-local pilot. Files under `A:\GLOBAL_6-next\admin`
-are read-only source material and must not be edited.
+Client-neutral managed admin shell: HTML5 login, unified chrome, Access Manager SPA, and a session bridge to legacy `/admin/admin` tools. **Any client** can host it via `PilotRootPath` and `managed/web.config`; we are currently dogfooding on one dev site for convenience.
+
+Files under `A:\GLOBAL_6-next\admin` are read-only global source — do not edit.
 
 See [`docs/managed-admin-shell-plan.md`](docs/managed-admin-shell-plan.md) for
 the current implementation status, IIS setup, verification, and later waves.
-Before continuing work, also read
-[`docs/agent-handoff.md`](docs/agent-handoff.md) for environment boundaries,
-known constraints, the tool-migration checklist, and pending remote tests.
+Before continuing work, read [`docs/admin-shell-platform.md`](docs/admin-shell-platform.md)
+and [`docs/agent-handoff.md`](docs/agent-handoff.md) for architecture, environment
+boundaries, and the tool-migration checklist.
 
 Plans and status:
 
+- [`docs/admin-shell-platform.md`](docs/admin-shell-platform.md) — **central overview** (legacy vs pilot, auth bridge, relocatable config).
 - [`docs/shell-unification-plan.md`](docs/shell-unification-plan.md) — unify
   Access Manager and Classic ASP chrome (next wave).
 - [`docs/github-repo.md`](docs/github-repo.md) — GitHub repo layout and deploy notes.
+- [`AGENTS.md`](AGENTS.md) — short index for coding agents.
 
-## IIS layout
+## IIS layout (example deployment)
 
-- `/dev/adminshell` remains inside the existing WVBPS front-end application.
-- The managed endpoints inherit the parent .NET Framework 4.8 configuration.
-- Shared pilot VB classes live in the application-root
-  `A:\wvbps\www\html\App_Code\AdminShell` folder, nested as
-  `Core/`, `Auth/`, `Shell/`, and `AccessManager/`.
+Values below are **one client's dev setup** (see `managed/web.config`). Other clients change `PilotRootPath`, host, and sync paths.
+
+- Pilot tree lives under the client's front-end IIS app (example: `/dev/adminshell`).
+- Managed endpoints inherit the parent .NET Framework 4.8 configuration.
+- Shared pilot VB classes deploy to the application-root `App_Code/AdminShell/` folder (flat; no nested subfolders).
 - `managed\web.config` contains only pilot app settings; it must not contain
   application-level sections such as `authentication`, `compilation`, or
   `sessionState`.

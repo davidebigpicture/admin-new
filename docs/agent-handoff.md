@@ -2,7 +2,8 @@
 
 Last updated: July 17, 2026
 
-This file is the operational handoff for the next agent. Read it with
+This file is the operational handoff for the next agent. Read
+[`admin-shell-platform.md`](admin-shell-platform.md) first, then this file with
 [`managed-admin-shell-plan.md`](managed-admin-shell-plan.md),
 [`shell-unification-plan.md`](shell-unification-plan.md), and
 [`github-repo.md`](github-repo.md) before changing the pilot.
@@ -87,17 +88,21 @@ configured route; authorization is still checked when a route is requested.
 1. `login.html` gets a session-bound CSRF token from `login.ashx`.
 2. It posts username/password JSON to `login.ashx`.
 3. A successful login writes the encrypted, signed, HTTP-only
-   `bp_admin_next` cookie scoped to `PilotRootPath`.
+   `bp_admin_next` cookie scoped to `PilotRootPath`, and (via
+   `PilotLegacySession`) legacy `/admin` cookies + Redis `LoginName`.
 4. A copied Classic ASP page includes local `topshell.asp`.
-5. `topshell.asp` forwards only that cookie to `authorize.ashx` through
-   `includes\ssi.inc`.
-6. The handler resolves the requested pilot path through `PilotRoutes` and
+5. `topshell.asp` forwards cookies to `authorize.ashx` through
+   `includes\ssi.inc` (`pilotBuildCookieHeader`).
+6. If `authorize.ashx` returns `NOSESSION`, `topshell.asp` redirects the
+   browser to `/admin/admin/pilot-bridge.asp` (legacy cookies are not sent
+   to `{PilotRootPath}` — see `admin-shell-platform.md`).
+7. The handler resolves the requested pilot path through `PilotRoutes` and
    checks the existing script/section ACL for the canonical path.
-7. The Classic ASP page runs only after authorization succeeds.
-8. `chrome.ashx` renders the configured shell header and footer.
+8. The Classic ASP page runs only after authorization succeeds.
+9. `chrome.ashx` renders the configured shell header and footer.
 
-The pilot cookie contains no password and does not authenticate the legacy
-Perl application.
+The pilot cookie contains no password. Legacy topshell still requires the
+encrypted `username` cookie on `/admin` paths.
 
 ## What has been observed remotely
 
@@ -156,11 +161,10 @@ prevents a copied URL from bypassing the existing authorization model.
 - Exercise Views inline edits and verify they still call the global
   `/admin/admin/...` Ajax endpoint. After pilot login, `ajax.asp?action=session`
   should return 200 (not 401) once the legacy session bridge is configured.
-- **Legacy session bridge:** pilot login writes CacheManager-compatible Redis keys
-  via `RedisSession` and sets `/admin` cookies. Membership cookie encryption is
-  native VB (`perl-crypt-cbc-blowfish` adapter). Set
-  `PilotMembershipEncryptionKey` to the legacy `encryption_key` value. See
-  `docs/legacy-credential-encoder.md`.
+- **Legacy session bridge:** see [`legacy-credential-encoder.md`](legacy-credential-encoder.md)
+  and [`admin-shell-platform.md`](admin-shell-platform.md). Set
+  `PilotMembershipEncryptionKey` in gitignored `managed/web.config.local`
+  (copy from `web.config.local.example`).
 - Check Login Log filtering/details, SQL Log list/file/detail, and SMS Log
   list/date/detail.
 - Confirm the legacy Perl login and global `/admin/admin/...` tools remain
