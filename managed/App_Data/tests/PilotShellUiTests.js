@@ -29,7 +29,7 @@ const sessionHandler = fs.readFileSync(path.join(managedRoot, "api", "session.as
 
 assertTrue(pilotShell.includes("admin-layout"), "classic chrome uses the unified admin layout");
 assertTrue(pilotShell.includes("adminMenu"), "classic chrome reserves the section menu container");
-assertTrue(pilotShell.includes("pilotToolNav"), "classic chrome reserves pilot tool navigation");
+assertTrue(!pilotShell.includes("pilotToolNav"), "classic chrome omits the duplicate top tool navigation");
 assertTrue(pilotShell.includes("managed/shared/shell.css"), "classic chrome loads the shared shell stylesheet");
 assertTrue(pilotShell.includes("PilotSession.load()"), "classic chrome bootstraps the shared session API");
 assertTrue(pilotShell.includes("renderSectionMenu"), "classic chrome hydrates the section menu");
@@ -41,6 +41,13 @@ assertTrue(
             headerOwner.includes('fa fa-bars');
     }),
     "all shell header owners include the accessible mobile menu button"
+);
+assertTrue(
+    !accessManagerIndex.includes("pilotToolNav") &&
+        !codeAdminIndex.includes("pilotToolNav") &&
+        !fs.readFileSync(path.join(managedRoot, "access-manager", "js", "app.js"), "utf8").includes("renderNav(") &&
+        !fs.readFileSync(path.join(managedRoot, "code-admin", "js", "app.js"), "utf8").includes("renderNav("),
+    "managed pages rely on the left section menu instead of duplicate top links"
 );
 assertTrue(sessionHandler.includes("PilotSessionHandler"), "pilot-wide session handler is registered");
 assertTrue(apiClientJs.includes("setApiBase"), "api client supports a managed base path");

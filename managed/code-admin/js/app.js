@@ -646,11 +646,6 @@
             const session = await window.PilotSession.load();
             userNameEl.textContent = session.userName;
             userEl.hidden = false;
-            window.PilotShell.renderNav(
-                document.getElementById("pilotToolNav"),
-                (session.paths && session.paths.routes) || [],
-                window.location.pathname
-            );
             window.PilotShell.renderSectionMenu(
                 document.getElementById("adminMenu"),
                 session.menuSections || [],

@@ -23,7 +23,6 @@
                 <button type="button" id="logoutButton">Sign out</button>
             </p>
             <button type="button" class="admin-menu-mobile-toggle" id="adminMenuMobileToggle" aria-controls="adminMenu" aria-expanded="false" aria-label="Show admin menu" title="Show admin menu"><i class="fa fa-bars" aria-hidden="true"></i></button>
-            <div id="pilotToolNav"></div>
         </div>
     </header>
 
@@ -47,6 +46,6 @@
     <script src="../shared/shell.js?v=071827b"></script>
     <script src="js/state.js?v=071826b"></script>
     <script src="js/view-model.js?v=071826f"></script>
-    <script src="js/app.js?v=071828a"></script>
+    <script src="js/app.js?v=071828b"></script>
 </body>
 </html>
