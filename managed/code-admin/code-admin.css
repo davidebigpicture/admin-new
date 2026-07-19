@@ -517,7 +517,7 @@
         grid-template-columns: auto 2rem minmax(0, 1fr) 5.5rem;
         grid-template-areas:
             "select rank value status"
-            "description description description description";
+            "select rank description description";
         gap: 0.4rem;
         padding: 0.55rem;
         border: 1px solid #dbe2ea;
@@ -575,7 +575,7 @@
     }
 
     #codeAdminApp .code-values-table-wrap .value-cell .code-value {
-        font-size: 0.78rem;
+        font-size: 0.9rem;
         line-height: 1.5rem;
     }
 
