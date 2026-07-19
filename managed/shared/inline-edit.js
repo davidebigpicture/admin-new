@@ -1,7 +1,7 @@
 "use strict";
 
 (function (global) {
-    let activeEscapeComponent = null;
+    let activeEscapeCancel = null;
 
     function InlineEditController(options) {
         options = options || {};
@@ -86,151 +86,144 @@
                 onError: { type: Function, default: function () {} }
             },
             emits: ["error"],
-            data: function () {
-                return {
-                    controller: null,
-                    escapeKeydownListener: null,
-                    escapeKeydownTarget: null,
-                    filterText: ""
-                };
-            },
-            computed: {
-                displayValue: function () {
-                    return this.formatValue(this.controller ? this.controller.originalValue : this.value);
-                },
-                selectSize: function () {
-                    const options = this.filteredOptions || this.options;
-                    return Math.max(2, Math.min(options.length, 8));
-                },
-                filteredOptions: function () {
-                    const filter = this.filterText.trim().toLowerCase();
-                    if (!filter) {
-                        return this.options;
-                    }
-                    return this.options.filter(function (option) {
-                        return String(option.label || "").toLowerCase().indexOf(filter) >= 0 || String(option.value || "").toLowerCase().indexOf(filter) >= 0;
-                    });
-                }
-            },
-            watch: {
-                value: function (value) {
-                    if (this.controller && !this.controller.editing && !this.controller.pending) {
-                        this.controller.originalValue = value == null ? "" : value;
-                        this.controller.value = this.controller.originalValue;
-                    }
-                }
-            },
-            mounted: function () {
-                const component = this;
-                this.controller = global.Vue.reactive(new InlineEditController({
-                    value: this.value,
-                    onSave: this.onSave,
-                    onError: this.reportError
+            setup: function (props, context) {
+                const controller = global.Vue.reactive(new InlineEditController({
+                    value: props.value,
+                    onSave: props.onSave,
+                    onError: reportError
                 }));
-                this.escapeKeydownListener = function (event) {
-                    if (activeEscapeComponent === component && event.key === "Escape") {
-                        event.preventDefault();
-                        event.stopPropagation();
-                        component.cancelEdit();
+                const filterText = global.Vue.ref("");
+                const editor = global.Vue.ref(null);
+                const filter = global.Vue.ref(null);
+                const composite = global.Vue.ref(null);
+                let escapeKeydownListener = null;
+                let escapeKeydownTarget = null;
+
+                const displayValue = global.Vue.computed(function () {
+                    return props.formatValue(controller.originalValue);
+                });
+                const filteredOptions = global.Vue.computed(function () {
+                    const filterValue = filterText.value.trim().toLowerCase();
+                    if (!filterValue) {
+                        return props.options;
                     }
-                };
-            },
-            beforeUnmount: function () {
-                this.stopEscapeCapture();
-            },
-            methods: {
-                reportError: function (error) {
-                    this.onError(error);
-                    this.$emit("error", error);
-                },
-                begin: function () {
-                    if (!this.disabled && this.controller.begin()) {
-                        if (activeEscapeComponent && activeEscapeComponent !== this) {
-                            activeEscapeComponent.cancelEdit();
-                        }
-                        activeEscapeComponent = this;
-                        this.filterText = "";
-                        this.startEscapeCapture();
-                        this.$forceUpdate();
-                        this.$nextTick(function () {
-                            const editor = this.searchable ? this.$refs.filter : this.$refs.editor;
-                            if (editor) {
-                                editor.focus();
-                            }
-                        });
-                    }
-                },
-                commit: function () {
-                    const component = this;
-                    return this.controller.commit().catch(function () {
-                        return false;
-                    }).finally(function () {
-                        component.stopEscapeCapture();
-                        component.$forceUpdate();
+                    return props.options.filter(function (option) {
+                        return String(option.label || "").toLowerCase().indexOf(filterValue) >= 0 || String(option.value || "").toLowerCase().indexOf(filterValue) >= 0;
                     });
-                },
-                startEscapeCapture: function () {
+                });
+                const selectSize = global.Vue.computed(function () {
+                    return Math.max(2, Math.min(filteredOptions.value.length, 8));
+                });
+
+                function reportError(error) {
+                    props.onError(error);
+                    context.emit("error", error);
+                }
+
+                function stopEscapeCapture() {
+                    if (escapeKeydownTarget) {
+                        escapeKeydownTarget.removeEventListener("keydown", escapeKeydownListener, true);
+                        escapeKeydownTarget = null;
+                    }
+                    if (activeEscapeCancel === cancelEdit) {
+                        activeEscapeCancel = null;
+                    }
+                }
+
+                function cancelEdit() {
+                    if (!controller.editing) {
+                        return;
+                    }
+                    controller.cancel();
+                    stopEscapeCapture();
+                }
+
+                function startEscapeCapture() {
                     const target = global.document && typeof global.document.addEventListener === "function" ? global.document : global;
-                    if (this.escapeKeydownTarget || !this.escapeKeydownListener || typeof target.addEventListener !== "function") {
+                    if (escapeKeydownTarget || typeof target.addEventListener !== "function") {
                         return;
                     }
-                    this.escapeKeydownTarget = target;
-                    target.addEventListener("keydown", this.escapeKeydownListener, true);
-                },
-                stopEscapeCapture: function () {
-                    if (this.escapeKeydownTarget) {
-                        this.escapeKeydownTarget.removeEventListener("keydown", this.escapeKeydownListener, true);
-                        this.escapeKeydownTarget = null;
-                    }
-                    if (activeEscapeComponent === this) {
-                        activeEscapeComponent = null;
-                    }
-                },
-                cancelEdit: function () {
-                    if (!this.controller || !this.controller.editing) {
+                    escapeKeydownListener = function (event) {
+                        if (activeEscapeCancel === cancelEdit && event.key === "Escape") {
+                            event.preventDefault();
+                            event.stopPropagation();
+                            cancelEdit();
+                        }
+                    };
+                    escapeKeydownTarget = target;
+                    target.addEventListener("keydown", escapeKeydownListener, true);
+                }
+
+                function begin() {
+                    if (props.disabled || !controller.begin()) {
                         return;
                     }
-                    this.controller.cancel();
-                    this.stopEscapeCapture();
-                    this.$forceUpdate();
-                },
-                onKeydown: function (event) {
-                    if (!this.controller || !this.controller.editing) {
+                    if (activeEscapeCancel && activeEscapeCancel !== cancelEdit) {
+                        activeEscapeCancel();
+                    }
+                    activeEscapeCancel = cancelEdit;
+                    filterText.value = "";
+                    startEscapeCapture();
+                    global.Vue.nextTick(function () {
+                        const activeEditor = props.searchable ? filter.value : editor.value;
+                        if (activeEditor) {
+                            activeEditor.focus();
+                        }
+                    });
+                }
+
+                function commit() {
+                    return controller.commit().catch(function () {
+                        return false;
+                    }).finally(stopEscapeCapture);
+                }
+
+                function onKeydown(event) {
+                    if (!controller.editing) {
                         return;
                     }
                     if (event.key === "Escape") {
                         event.preventDefault();
-                        this.cancelEdit();
-                    } else if (event.key === "Enter" && this.editorType !== "textarea") {
+                        cancelEdit();
+                    } else if (event.key === "Enter" && props.editorType !== "textarea") {
                         event.preventDefault();
-                        this.commit();
+                        commit();
                     }
-                },
-                onBlur: function () {
-                    const component = this;
-                    this.controller.handleBlur().catch(function () {
+                }
+
+                function onBlur() {
+                    controller.handleBlur().catch(function () {
                         return false;
-                    }).finally(function () {
-                        component.stopEscapeCapture();
-                        component.$forceUpdate();
-                    });
-                },
-                onFilterInput: function (event) {
-                    this.filterText = event.target.value;
-                },
-                onSelectChange: function () {
-                    if (this.commitOnChange) {
-                        this.commit();
+                    }).finally(stopEscapeCapture);
+                }
+
+                function onFilterInput(event) {
+                    filterText.value = event.target.value;
+                }
+
+                function onSelectChange() {
+                    if (props.commitOnChange) {
+                        commit();
                     }
-                },
-                onCompositeFocusout: function () {
-                    const component = this;
+                }
+
+                function onCompositeFocusout() {
                     global.setTimeout(function () {
-                        if (component.controller && component.controller.editing && component.$refs.composite && !component.$refs.composite.contains(global.document.activeElement)) {
-                            component.onBlur();
+                        if (controller.editing && composite.value && !composite.value.contains(global.document.activeElement)) {
+                            onBlur();
                         }
                     }, 0);
                 }
+
+                global.Vue.watch(function () { return props.value; }, function (value) {
+                    if (!controller.editing && !controller.pending) {
+                        controller.originalValue = value == null ? "" : value;
+                        controller.value = controller.originalValue;
+                    }
+                });
+                global.Vue.onBeforeUnmount(stopEscapeCapture);
+
+                return { controller: controller, filterText: filterText, editor: editor, filter: filter, composite: composite, displayValue: displayValue, filteredOptions: filteredOptions, selectSize: selectSize, begin: begin, commit: commit, cancelEdit: cancelEdit, onKeydown: onKeydown, onBlur: onBlur, onFilterInput: onFilterInput, onSelectChange: onSelectChange, onCompositeFocusout: onCompositeFocusout };
             },
             template: `
                 <span class="admin-inline-edit" :class="{ 'admin-inline-edit--pending': controller && controller.pending }">

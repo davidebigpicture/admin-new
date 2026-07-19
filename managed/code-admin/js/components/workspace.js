@@ -6,33 +6,32 @@
         props: {
             workspace: { type: Object, required: true }, page: { type: Object, required: true }, selectedClass: { type: String, required: true }, search: { type: String, required: true }, selectedIds: { type: Object, required: true }, loading: { type: Boolean, required: true }, rankUpdating: { type: Boolean, required: true }, statusUpdatingId: { type: [String, Number], default: null }, onClassChange: { type: Function, required: true }, onSaveRank: { type: Function, required: true }, onSetStatus: { type: Function, required: true }
         },
-        computed: {
-            hasSelectedClass: function () { return !!this.selectedClass; },
-            selectedCount: function () { return Object.keys(this.selectedIds).length; },
-            displayItems: function () {
-                const component = this;
-                return (this.page.items || []).map(function (item, index) { return { item: item, index: index }; }).sort(function (left, right) {
-                    const order = component.statusIndex(left.item) - component.statusIndex(right.item);
+        emits: ["selection-change", "error", "delete", "add", "edit", "description-save", "long-description-save", "page-change", "search-change"],
+        setup: function (props, context) {
+            function statusFor(item) { return item.status === "Y" || item.status === "A" || item.status === "N" ? item.status : (item.inactive ? "Y" : "N"); }
+            function statusIndex(item) { return { N: 0, Y: 1, A: 2 }[statusFor(item)]; }
+            function statusName(item) { return { N: "Active", Y: "Inactive", A: "Archived" }[statusFor(item)]; }
+            function isActive(item) { return statusFor(item) === "N"; }
+            function formatStatus(status) { return { N: "Active", Y: "Inactive", A: "Archived" }[status] || status; }
+            const hasSelectedClass = global.Vue.computed(function () { return !!props.selectedClass; });
+            const selectedCount = global.Vue.computed(function () { return Object.keys(props.selectedIds).length; });
+            const displayItems = global.Vue.computed(function () {
+                return (props.page.items || []).map(function (item, index) { return { item: item, index: index }; }).sort(function (left, right) {
+                    const order = statusIndex(left.item) - statusIndex(right.item);
                     return order || left.index - right.index;
                 }).map(function (entry) { return entry.item; });
-            },
-            pageEnd: function () { return Math.min(this.page.start + this.page.pageSize, this.page.totalCount || 0); },
-            hasPreviousPage: function () { return this.page.start > 0; },
-            hasNextPage: function () { return this.pageEnd < (this.page.totalCount || 0); },
-            pageNumber: function () { return this.page.totalCount ? Math.floor(this.page.start / this.page.pageSize) + 1 : 0; },
-            pageCount: function () { return this.page.totalCount ? Math.ceil(this.page.totalCount / this.page.pageSize) : 0; }
-        },
-        methods: {
-            itemSelected: function (id) { return !!this.selectedIds[id]; },
-            updateSelection: function (id, event) { this.$emit("selection-change", id, event.target.checked); },
-            saveRank: function (item, value) { return this.onSaveRank(item, value); },
-            statusFor: function (item) { return item.status === "Y" || item.status === "A" || item.status === "N" ? item.status : (item.inactive ? "Y" : "N"); },
-            statusIndex: function (item) { return { N: 0, Y: 1, A: 2 }[this.statusFor(item)]; },
-            statusName: function (item) { return { N: "Active", Y: "Inactive", A: "Archived" }[this.statusFor(item)]; },
-            isActive: function (item) { return this.statusFor(item) === "N"; },
-            formatStatus: function (status) { return { N: "Active", Y: "Inactive", A: "Archived" }[status] || status; },
-            editClassUrl: function () { return "/admin/admin/cgi-bin/classadminO.pl?action=showUpdate&code_class=" + encodeURIComponent(this.selectedClass) + "&Submit=Modify"; },
-            formatCodeClass: function (codeClass) { const codeClassItem = (this.workspace.classes || []).filter(function (item) { return item.codeClass === codeClass; })[0]; return codeClassItem ? codeClassItem.codeClassDesc + " (" + codeClassItem.codeClass + ")" : codeClass; }
+            });
+            const pageEnd = global.Vue.computed(function () { return Math.min(props.page.start + props.page.pageSize, props.page.totalCount || 0); });
+            const hasPreviousPage = global.Vue.computed(function () { return props.page.start > 0; });
+            const hasNextPage = global.Vue.computed(function () { return pageEnd.value < (props.page.totalCount || 0); });
+            const pageNumber = global.Vue.computed(function () { return props.page.totalCount ? Math.floor(props.page.start / props.page.pageSize) + 1 : 0; });
+            const pageCount = global.Vue.computed(function () { return props.page.totalCount ? Math.ceil(props.page.totalCount / props.page.pageSize) : 0; });
+            function itemSelected(id) { return !!props.selectedIds[id]; }
+            function updateSelection(id, event) { context.emit("selection-change", id, event.target.checked); }
+            function saveRank(item, value) { return props.onSaveRank(item, value); }
+            function editClassUrl() { return "/admin/admin/cgi-bin/classadminO.pl?action=showUpdate&code_class=" + encodeURIComponent(props.selectedClass) + "&Submit=Modify"; }
+            function formatCodeClass(codeClass) { const codeClassItem = (props.workspace.classes || []).filter(function (item) { return item.codeClass === codeClass; })[0]; return codeClassItem ? codeClassItem.codeClassDesc + " (" + codeClassItem.codeClass + ")" : codeClass; }
+            return { hasSelectedClass: hasSelectedClass, selectedCount: selectedCount, displayItems: displayItems, pageEnd: pageEnd, hasPreviousPage: hasPreviousPage, hasNextPage: hasNextPage, pageNumber: pageNumber, pageCount: pageCount, itemSelected: itemSelected, updateSelection: updateSelection, saveRank: saveRank, statusFor: statusFor, statusIndex: statusIndex, statusName: statusName, isActive: isActive, formatStatus: formatStatus, editClassUrl: editClassUrl, formatCodeClass: formatCodeClass };
         },
         template: `
             <section class="panel panel-default code-admin-workspace" aria-label="Code Admin workspace" :aria-busy="loading ? 'true' : 'false'">

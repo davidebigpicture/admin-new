@@ -45,11 +45,11 @@
     <script src="../shared/dialogs.js"></script>
     <script src="../shared/shell.js?v=071827b"></script>
     <script src="../shared/vendor/vue.global.prod.js?v=3.5.13"></script>
-    <script src="../shared/inline-edit.js?v=0719ad"></script>
+    <script src="../shared/inline-edit.js?v=0719ag"></script>
     <script src="js/view-model.js?v=071826f"></script>
     <script src="js/navigation.js?v=0719a"></script>
-    <script src="js/components/editor.js?v=0719n"></script>
-        <script src="js/components/workspace.js?v=0719ac"></script>
-    <script src="js/app.js?v=0719ac"></script>
+    <script src="js/components/editor.js?v=0719ai"></script>
+        <script src="js/components/workspace.js?v=0719ag"></script>
+    <script src="js/app.js?v=0719ai"></script>
 </body>
 </html>
