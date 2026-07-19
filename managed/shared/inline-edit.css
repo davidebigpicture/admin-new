@@ -1,0 +1,173 @@
+.admin-inline-edit {
+    position: relative;
+    display: inline-block;
+}
+
+.admin-inline-edit__display {
+    min-height: 0;
+    padding: 0;
+    border: 0;
+    border-bottom: 1px dashed currentColor;
+    border-radius: 0;
+    background: transparent;
+    color: inherit;
+    font: inherit;
+    text-align: inherit;
+}
+
+.admin-inline-edit__display:hover,
+.admin-inline-edit__display:focus {
+    border-bottom-style: solid;
+    outline: 0;
+}
+
+.admin-inline-edit--compact-select {
+    width: 100%;
+    color: inherit;
+}
+
+.admin-inline-edit--compact-select .admin-inline-edit__display {
+    box-sizing: border-box;
+    display: inline-flex;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 0.35rem;
+    width: 100%;
+    min-width: 0;
+    max-width: 100%;
+    margin: 0;
+    padding: 0;
+    border: 0;
+    border-radius: 0;
+    background: transparent;
+    color: inherit;
+    font: inherit;
+    line-height: 1.5rem;
+    white-space: nowrap;
+    cursor: pointer;
+    text-align: right;
+    vertical-align: middle;
+}
+
+.admin-inline-edit--compact-select .admin-inline-edit__display:hover,
+.admin-inline-edit--compact-select .admin-inline-edit__display:focus,
+.admin-inline-edit--compact-select:focus-within .admin-inline-edit__display {
+    border-bottom: 0;
+    outline: 0;
+}
+
+.admin-inline-edit--compact-select .admin-inline-edit__display-chevron {
+    flex: 0 0 auto;
+    width: 0.4rem;
+    height: 0.4rem;
+    border-right: 1px solid currentColor;
+    border-bottom: 1px solid currentColor;
+    pointer-events: none;
+    transform: translateY(-15%) rotate(45deg);
+}
+
+.admin-inline-edit--compact-select .admin-inline-edit__display:disabled {
+    cursor: not-allowed;
+    opacity: 0.65;
+}
+
+.admin-inline-edit--compact-select .admin-inline-edit__select {
+    overflow-y: auto;
+}
+
+.admin-inline-edit--menu-right .admin-inline-edit__select {
+    left: auto;
+    right: 0;
+}
+
+.admin-inline-edit--status-active {
+    color: #1f6b45;
+}
+
+.admin-inline-edit--status-inactive {
+    color: #8a5a00;
+}
+
+.admin-inline-edit--status-archived {
+    color: #5b6572;
+}
+
+.admin-inline-edit__input {
+    min-width: 4.5rem;
+    max-width: 100%;
+}
+
+.admin-inline-edit__input--textarea {
+    width: 100%;
+    min-width: 100%;
+    min-height: 5rem;
+    resize: vertical;
+    white-space: normal;
+    overflow-wrap: anywhere;
+}
+
+.admin-inline-edit__select {
+    position: absolute;
+    top: 100%;
+    left: 0;
+    z-index: 20;
+    min-width: 10rem;
+    max-width: min(24rem, calc(100vw - 1rem));
+    max-height: 12rem;
+    border: 1px solid #999;
+    background: #fff;
+    outline: 0;
+    box-shadow: 0 2px 6px rgba(15, 23, 42, 0.18);
+}
+
+.admin-inline-edit__select:focus,
+.admin-inline-edit__select:focus-visible {
+    outline: 0;
+}
+
+.admin-inline-edit__select option:hover {
+    background-color: #eee;
+}
+
+.admin-inline-edit__select option {
+    color: #000;
+}
+
+.admin-inline-edit__searchable {
+    position: absolute;
+    top: 100%;
+    left: 0;
+    z-index: 20;
+    display: grid;
+    gap: 0.25rem;
+    width: min(32rem, calc(100vw - 1rem));
+    padding: 0.35rem;
+    border: 1px solid #aeb8c4;
+    background: #fff;
+    box-shadow: 0 2px 6px rgba(15, 23, 42, 0.18);
+}
+
+.admin-inline-edit__searchable .admin-inline-edit__select {
+    position: static;
+    width: 100%;
+    min-width: 0;
+    max-width: none;
+    border: 0;
+    box-shadow: none;
+}
+
+.admin-inline-edit__filter {
+    width: 100%;
+    border: 1px solid #999;
+}
+
+.admin-inline-edit__empty {
+    color: #64748b;
+    font-size: 0.82em;
+}
+
+.admin-inline-edit__pending {
+    margin-left: 0.35rem;
+    color: #64748b;
+    font-size: 0.82em;
+}

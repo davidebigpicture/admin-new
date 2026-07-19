@@ -1,149 +1,52 @@
-"use strict";
+﻿"use strict";
 
 const fs = require("fs");
 const path = require("path");
 
 let failures = 0;
-
 function assertTrue(condition, message) {
-    if (condition) {
-        console.log("PASS: " + message);
-        return;
-    }
+    if (condition) { console.log("PASS: " + message); return; }
     failures += 1;
     console.error("FAIL: " + message);
 }
 
 const managedRoot = path.resolve(__dirname, "..", "..");
-const indexAspx = fs.readFileSync(path.join(managedRoot, "code-admin", "index.aspx"), "utf8");
-const appJs = fs.readFileSync(path.join(managedRoot, "code-admin", "js", "app.js"), "utf8");
-const viewModelJs = fs.readFileSync(path.join(managedRoot, "code-admin", "js", "view-model.js"), "utf8");
-const repoRoot = path.resolve(managedRoot, "..");
-const repositoryVb = fs.readFileSync(path.join(repoRoot, "App_Code", "AdminShell", "CodeAdminRepository.vb"), "utf8");
-const serviceVb = fs.readFileSync(path.join(repoRoot, "App_Code", "AdminShell", "CodeAdminService.vb"), "utf8");
+const read = function (filePath) { return fs.readFileSync(filePath, "utf8"); };
+const indexAspx = read(path.join(managedRoot, "code-admin", "index.aspx"));
+const appJs = read(path.join(managedRoot, "code-admin", "js", "app.js"));
+const editorJs = read(path.join(managedRoot, "code-admin", "js", "components", "editor.js"));
+const workspaceJs = read(path.join(managedRoot, "code-admin", "js", "components", "workspace.js"));
+const codeAdminCss = read(path.join(managedRoot, "code-admin", "code-admin.css"));
+const inlineEditCss = read(path.join(managedRoot, "shared", "inline-edit.css"));
 
-assertTrue(indexAspx.includes('Inherits="CodeAdminPage"'), "code admin uses server-side page auth");
-assertTrue(indexAspx.includes("view-model.js"), "code admin loads shared view model");
-const bootstrapIndex = indexAspx.indexOf("bootstrap/3.4.1/css/bootstrap.min.css");
-const legacyStylesIndex = indexAspx.indexOf("PilotConfig.StylesheetUrl");
-const shellStylesIndex = indexAspx.indexOf("../shared/shell.css");
-const codeAdminStylesIndex = indexAspx.indexOf("code-admin.css");
-assertTrue(bootstrapIndex >= 0, "code admin loads Bootstrap 3.4.1 CSS");
-assertTrue(legacyStylesIndex > bootstrapIndex, "code admin loads configured legacy styles after Bootstrap");
-assertTrue(shellStylesIndex > legacyStylesIndex, "code admin loads shared shell styles after legacy styles");
-assertTrue(codeAdminStylesIndex > shellStylesIndex, "code admin loads scoped overrides last");
-assertTrue(appJs.includes("CodeAdminViewModel"), "app delegates class selection rules to view model");
-assertTrue(appJs.includes("disabled"), "add button is disabled without a selected class");
-assertTrue(appJs.includes("hasSelectedClass"), "app checks for selected class before mutations");
-assertTrue(viewModelJs.includes("canOpenAddEditor"), "view model exposes add guard");
-assertTrue(appJs.includes('data-action="add"'), "workspace still exposes add action");
-assertTrue(appJs.includes("panel panel-default"), "workspace uses a Bootstrap panel");
-assertTrue(appJs.includes("form-inline"), "filters use a Bootstrap inline form");
-assertTrue(appJs.includes("form-control"), "filters and editor use Bootstrap form controls");
-assertTrue(appJs.includes("code-admin-panel-heading") && appJs.includes('id="codeClassSelect"'), "class selector is rendered in the panel heading");
-assertTrue(!appJs.includes("rowsInput"), "workspace has no configurable rows control");
-assertTrue(!appJs.includes('data-action="search"'), "workspace has no search button");
-assertTrue(!appJs.includes("&rows="), "value loads do not send a dynamic page size");
-assertTrue(appJs.includes("let searchTimer") && appJs.includes("}, 300)"), "search input is debounced by 300ms");
-const searchInputHandlerStart = appJs.indexOf('if (event.target.id !== "searchInput")');
-const searchInputHandlerEnd = appJs.indexOf('root.addEventListener("keydown"', searchInputHandlerStart);
-const searchInputHandler = appJs.slice(searchInputHandlerStart, searchInputHandlerEnd);
-const capturedSearchIndex = searchInputHandler.indexOf("const search = event.target.value.trim();");
-const searchTimeoutIndex = searchInputHandler.indexOf("searchTimer = window.setTimeout");
-assertTrue(
-    capturedSearchIndex >= 0 && capturedSearchIndex < searchTimeoutIndex &&
-    searchInputHandler.includes("search: search,") &&
-    !searchInputHandler.includes('document.getElementById("searchInput")'),
-    "search debounce captures the input value before scheduling and never reads the replaced search input"
-);
-assertTrue(appJs.includes("let loadSequence") && appJs.includes("requestSequence === loadSequence"), "stale search responses cannot overwrite newer results");
-assertTrue(appJs.includes("let editorRequestSequence = 0") && appJs.includes("function invalidateEditorRequests()"), "editor requests use a dedicated generation token");
-assertTrue(
-    appJs.includes("requestSequence !== editorRequestSequence || stateApi.get().selectedClass !== selectedClass"),
-    "stale Add and Edit metadata responses cannot open an editor after a context change"
-);
-assertTrue(
-    appJs.includes("currentEditor !== editor") &&
-    appJs.includes("!currentForm.isConnected") &&
-    appJs.includes("currentForm.codeValue.value.trim() !== codeValue") &&
-    appJs.includes("captureEditorValues(currentForm, currentEditor)"),
-    "metadata refresh ignores detached or changed create editors and preserves live form values"
-);
-assertTrue(
-    appJs.includes("if (requestSequence === editorRequestSequence)") &&
-    appJs.includes('else if (action === "cancel-editor")') &&
-    appJs.includes("invalidateEditorRequests();"),
-    "stale editor request errors are suppressed and cancel invalidates pending editor work"
-);
-assertTrue(appJs.includes('data-action="edit" data-id="') && appJs.includes('class="code-value"'), "clicking the code value opens detail editing");
-assertTrue(!appJs.includes("contenteditable"), "descriptions are plain display text without inline editing");
-assertTrue(!appJs.includes("data-patch-field") && !appJs.includes("patchField("), "workspace has no inline patch handler");
-assertTrue(appJs.includes("getDetailFields") && appJs.includes("renderMetadataField"), "detail editor renders fields from workspace metadata");
-assertTrue(appJs.includes("controlType === \"radio\"") && appJs.includes("controlType === \"select\"") && appJs.includes("controlType === \"multiselect\""), "detail editor supports radio, select, and multiselect metadata controls");
-assertTrue(appJs.includes('const optionId = id + "-" + index') && appJs.includes('for="\' + optionId + \'"'), "radio choices use unique IDs with associated labels");
-assertTrue(appJs.includes('<fieldset class="code-admin-radio-options"') && appJs.includes('<legend class="sr-only">'), "radio groups have an accessible group label");
-assertTrue(appJs.includes('document.getElementById("detail-codeValueDesc")'), "edit focus targets the rendered metadata description field");
-assertTrue(appJs.includes("editor.fieldMetadata"), "detail editor uses row-specific hydrated metadata when returned");
-assertTrue(!appJs.includes("lookupSource"), "client receives concrete options rather than lookup source parameters");
-assertTrue(appJs.includes("field.required ? \" required\""), "metadata-required fields render with HTML required validation");
-assertTrue(appJs.includes("getPayloadFieldKeys") && appJs.includes("form.elements[fieldKey]"), "detail save serializes metadata fields using their payload keys");
-assertTrue(!appJs.includes("optionIndex <= 17"), "editor rendering is not hard-coded to an optional-value loop");
-assertTrue(appJs.includes("table-responsive"), "value table has responsive containment");
-assertTrue(
-    appJs.indexOf("if (state.editor)") < appJs.indexOf('id="codeClassSelect"', appJs.indexOf("function render(state)")),
-    "editor rendering branches before list class selection rendering"
-);
-assertTrue(
-    appJs.indexOf("if (state.editor)") < appJs.indexOf("code-admin-filters", appJs.indexOf("function render(state)")) &&
-    appJs.indexOf("if (state.editor)") < appJs.indexOf("renderTable(page", appJs.indexOf("function render(state)")),
-    "editor rendering branches before list filters and table rendering"
-);
-assertTrue(appJs.includes("Edit " + '" + escapeHtml(editor.codeValue)') && appJs.includes("Add code value"), "editor heading identifies edit and add modes");
-assertTrue(appJs.includes('fa-arrow-left') && appJs.includes('> Back to list</button>') && appJs.includes('data-action="cancel-editor"'), "editor heading exposes Back to list through the cancel action");
-assertTrue(
-    appJs.slice(appJs.indexOf('action === "cancel-editor"'), appJs.indexOf('action === "delete"')).includes("stateApi.set({ editor: null });"),
-    "cancel returns to the existing list state without loading or mutating values"
-);
-assertTrue(
-    appJs.includes("table table-striped table-hover table-condensed"),
-    "value grid uses compact Bootstrap table styling"
-);
-assertTrue(appJs.includes("getSelectedClass"), "workspace resolves friendly selected-class metadata");
-assertTrue(appJs.includes("metadata=true&codeClass="), "Add loads hydrated metadata only for the selected class");
-assertTrue(appJs.includes("refreshCreateMetadata") && appJs.includes("data-code-value"), "ORG_SUB_TY_CD add refreshes contextual metadata after its value is entered");
-assertTrue(appJs.includes("captureEditorValues"), "metadata refresh preserves current editor values");
-assertTrue(serviceVb.includes("GetDetailMetadata") && !serviceVb.includes("HydrateMetadata(CodeAdminFieldMetadataRegistry.Build(majorCode, classes(classIndex).CodeClass), Nothing)"), "workspace metadata remains static while detail metadata hydrates on demand");
-assertTrue(repositoryVb.includes("code_value.code_class = 'ORG_SUB_TY_CD'") && repositoryVb.includes("membership_column_detail.column_desc") && repositoryVb.includes("membership_column_detail.column_rpt_desc"), "ORG_SUB_TY_CD column lookup follows the legacy code-value join and projection");
-assertTrue(repositoryVb.includes("String.Equals(organizationId, \"825\"") && repositoryVb.includes('"product"') && repositoryVb.includes('"batch_product"'), "product lookup table is selected server-side by organization");
-assertTrue(appJs.includes('class="rank-control"'), "active values expose a numeric ranker control");
-assertTrue(appJs.includes("data-rank-position"), "ranker controls post position changes");
-assertTrue(appJs.includes('api/values.ashx?action=position'), "ranker uses the position endpoint");
-assertTrue(appJs.includes("Rank must be a positive whole number."), "ranker rejects invalid positions before posting");
-assertTrue(appJs.includes("let rankUpdateInFlight = false") && appJs.includes("if (rankUpdateInFlight)") && appJs.includes("rankUpdateInFlight = true"), "rank updates cannot overlap");
-assertTrue(appJs.includes("rankUpdating: true") && appJs.includes("rankUpdating: false") && appJs.includes("rankUpdating ? \" disabled\""), "rank controls are disabled while updating and restored afterward");
-assertTrue(appJs.includes("if (requestSequence !== loadSequence)") && appJs.includes("throw error;"), "only current load failures surface to the error handler");
-assertTrue(/selectedIds:\s*\{\},\s*editor:\s*null/.test(appJs) && appJs.includes('data-action="prev"') && appJs.includes('data-action="next"'), "paging clears hidden selection and closes the editor");
-assertTrue(
-    appJs.includes("Code value</th>") && appJs.includes("Description</th>"),
-    "value and description use separate columns"
-);
-assertTrue(appJs.includes("status-indicator"), "status uses a quiet text indicator");
-assertTrue(
-    !appJs.includes("label label-success") && !appJs.includes("label label-default"),
-    "status no longer looks like a button"
-);
-assertTrue(appJs.includes("row-actions"), "row actions use an inline action layout");
-assertTrue(appJs.includes("protected-value"), "protected values do not expose mutation actions");
-assertTrue(appJs.includes("code-value-description"), "descriptions use a plain display element");
-assertTrue(appJs.includes("PilotDialogs.confirm"), "bulk delete uses the shared confirmation dialog");
-assertTrue(!appJs.includes("window.confirm"), "bulk delete no longer uses the browser confirmation dialog");
-assertTrue(
-    appJs.includes('codeValue: editor.mode === "edit" ? editor.codeValue'),
-    "edit save uses the static code value instead of a missing form field"
-);
+assertTrue(indexAspx.includes('Inherits="CodeAdminPage"'), "Code Admin retains server-side page authorization");
+assertTrue(indexAspx.indexOf("vue.global.prod.js") < indexAspx.indexOf("inline-edit.js") && indexAspx.indexOf("components/editor.js") < indexAspx.indexOf("components/workspace.js") && indexAspx.indexOf("components/workspace.js") < indexAspx.indexOf("js/app.js"), "Vue dependencies load before Code Admin components and app");
+assertTrue(indexAspx.includes('code-admin.css?v=0719ab') && indexAspx.includes('../shared/inline-edit.css?v=0719af') && indexAspx.includes('../shared/inline-edit.js?v=0719ad') && indexAspx.includes('js/components/workspace.js?v=0719ac') && indexAspx.includes('js/app.js?v=0719ac') && !indexAspx.includes('inline-edit.css?v=0719v'), "Code Admin refreshes only the changed runtime assets");
+assertTrue(appJs.includes("global.Vue.createApp") && appJs.includes('app.mount("#codeAdminApp")') && !appJs.includes("innerHTML"), "Code Admin uses the Vue workspace root without legacy rendering");
+assertTrue(appJs.includes("const pageSize = 200") && workspaceJs.includes("search-change") && appJs.includes("}, 300)"), "list remains a 200-row typeahead workspace");
+assertTrue(workspaceJs.includes("Add Value") && workspaceJs.includes("Delete Code<span") && workspaceJs.indexOf("Delete Code<span") < workspaceJs.indexOf("Add Value") && workspaceJs.includes("v-if=\"hasSelectedClass\"") && workspaceJs.includes("!page.canDelete || selectedCount === 0") && workspaceJs.includes("Deletion is unavailable for this protected code class."), "selected classes keep the safe count-aware Delete command before far-right Add Value");
+assertTrue(workspaceJs.includes("statusFor: function") && workspaceJs.includes('item.status === "Y"') && workspaceJs.includes('item.status === "A"') && workspaceJs.includes('(item.inactive ? "Y" : "N")') && workspaceJs.includes("statusIndex: function") && workspaceJs.includes("return order || left.index - right.index;"), "explicit status supports an old-payload fallback and stable Active, Inactive, Archived ordering");
+assertTrue(workspaceJs.includes('onSetStatus: { type: Function, required: true }') && workspaceJs.includes('<InlineEdit class="admin-inline-edit--compact-select admin-inline-edit--menu-right"') && workspaceJs.includes("'admin-inline-edit--status-' + statusName(item).toLowerCase()") && workspaceJs.includes('editor-type="select" commit-on-change') && workspaceJs.includes(':value="statusFor(item)"') && workspaceJs.includes(':format-value="formatStatus"') && workspaceJs.includes(':disabled="item.isProtected || statusUpdatingId === item.codeValueId"') && workspaceJs.includes('return onSetStatus(item, value);') && appJs.includes(':on-set-status="setStatus"') && !appJs.includes('@status-change') && !workspaceJs.includes('status-menu') && !workspaceJs.includes('status-select') && !workspaceJs.includes('status-inline-edit') && !workspaceJs.includes('openStatusId'), "status uses shared compact, right-aligned, lifecycle-aware InlineEdit variants with promise-backed saves");
+assertTrue(!workspaceJs.includes('type="range"') && !workspaceJs.includes("status-slider") && !codeAdminCss.includes("status-slider"), "range and status-slider remnants are removed");
+assertTrue(!workspaceJs.includes("status-switch") && !workspaceJs.includes('role="switch"') && !codeAdminCss.includes("status-switch"), "dead switch markup and styling are removed");
+assertTrue(/\.admin-inline-edit__select option\s*\{[^}]*color: #000;/.test(inlineEditCss) && /\.admin-inline-edit__select option:hover\s*\{[^}]*background-color: #eee;/.test(inlineEditCss), "shared select options retain neutral text with a light hover state");
+assertTrue(workspaceJs.includes("'code-value-row--inactive'") && workspaceJs.includes("'code-value-row--archived'") && /\.code-value-row--inactive\s*\{[^}]*background-color:/.test(codeAdminCss) && /\.code-value-row--archived\s*\{[^}]*background-color:/.test(codeAdminCss) && /\.table > tbody > tr > td\s*\{[^}]*background-color: transparent;/.test(codeAdminCss), "inactive and archived color belongs to rows while cells remain transparent");
+assertTrue(appJs.includes("setStatus: async function") && appJs.includes('action=status') && appJs.includes("status: status") && appJs.includes("try { await this.loadValues(); } catch (reloadError) {}") && appJs.includes("finally { this.statusUpdatingId = null; }") && appJs.includes(':on-set-status="setStatus"'), "status requests use the status endpoint, restore server state after failure, and clear updating state");
+assertTrue(workspaceJs.includes('placeholder="\\u00a0"') && workspaceJs.includes(":label=\"'Rank for ' + item.codeValue\"") && /\.rank-cell\s*\{[^}]*width: 3\.5rem;/.test(codeAdminCss) && /\.rank-cell \.admin-inline-edit__display\s*\{[^}]*min-width: 1\.125rem;[^}]*border-bottom: 1px dashed #aeb8c4;[^}]*color: #aeb8c4;/.test(codeAdminCss) && /\.rank-cell \.admin-inline-edit__display:hover,[\s\S]*?\.rank-cell \.admin-inline-edit:focus-within \.admin-inline-edit__display\s*\{[^}]*border-bottom-color: #64748b;[^}]*color: #64748b;/.test(codeAdminCss), "active ranks use compact faint blank targets with stronger hover and focus feedback");
+assertTrue(/\.rank-cell \.admin-inline-edit__input\s*\{[^}]*width: 2\.5rem;[^}]*min-width: 2\.5rem;/.test(codeAdminCss), "rank editing retains the 2.5rem numeric input");
+assertTrue(workspaceJs.includes(":label=\"'Description for ' + item.codeValue\"") && workspaceJs.includes(":label=\"'Extended description for ' + item.codeValue\"") && workspaceJs.includes("description-inline-edit description-inline-edit--long") && workspaceJs.includes("description-inline-edit--empty") && /\.description-cell \.admin-inline-edit__display\s*\{[^}]*display: inline-block;[^}]*min-width: 1rem;[^}]*min-height: 1\.5rem;/.test(codeAdminCss) && /\.description-cell \.admin-inline-edit__input--textarea\s*\{[^}]*width: 100%;/.test(codeAdminCss), "both blank description targets stay discoverable while textarea editing fills the cell");
+assertTrue(/\.description-cell \.admin-inline-edit__input,\s*#codeAdminApp \.rank-cell \.admin-inline-edit__input\s*\{[^}]*box-sizing: border-box;[^}]*border: 1px solid #aeb8c4;[^}]*border-radius: 3px;[^}]*background: #fff;[^}]*outline: 0;[^}]*box-shadow: none;/.test(codeAdminCss) && /\.description-cell \.admin-inline-edit__input:focus,[\s\S]*?\.rank-cell \.admin-inline-edit__input:focus-visible\s*\{[^}]*border-color: #2563eb;[^}]*outline: 0;[^}]*box-shadow: none;/.test(codeAdminCss), "scoped description and rank editors use one authored border without focus outlines or shadows");
+assertTrue(/\.value-cell\s*\{[^}]*width: 18rem;/.test(codeAdminCss) && /\.value-cell \.code-value\s*\{[^}]*white-space: nowrap;/.test(codeAdminCss) && /\.code-values-table-wrap\s*\{[^}]*overflow-x: visible;/.test(codeAdminCss) && !/\.value-cell \.code-value\s*\{[^}]*overflow-x:/.test(codeAdminCss), "code values use an 18rem nowrap column without internal horizontal scrolling");
+assertTrue(/\.code-value\s*\{[^}]*min-height: 1\.5rem;/.test(codeAdminCss), "code values override shared button sizing with a compact 1.5rem minimum height");
+assertTrue(!codeAdminCss.includes('status-select') && !codeAdminCss.includes('status-menu') && !codeAdminCss.includes('status-inline-edit'), "Code Admin does not own reusable status-control styling");
+assertTrue(/\.code-admin-panel-heading \.class-filter\s*\{[^}]*display: flex;[^}]*align-items: center;[^}]*flex-wrap: wrap;[^}]*gap: 0\.65rem;/.test(codeAdminCss) && /\.class-filter \.admin-inline-edit\s*\{[^}]*min-width: 0;[^}]*max-width: 100%;/.test(codeAdminCss) && !codeAdminCss.includes('min-width: min(32rem, calc(100vw - 14rem));') && !/@media \(max-width: 860px\)[\s\S]*?\.code-admin-panel-heading \.class-filter\s*\{[^}]*flex-direction: column;/.test(codeAdminCss), "class title and Edit class remain an adjacent wrapping row while narrow actions retain their separate layout");
+assertTrue(/@media \(max-width: 860px\)[\s\S]*?\.code-admin-panel-heading\s*\{[^}]*flex-wrap: wrap;/.test(codeAdminCss) && /@media \(max-width: 600px\)[\s\S]*?\.code-admin-actions\s*\{[^}]*flex: 0 0 100%;[^}]*width: 100%;[^}]*margin-left: 0;[^}]*justify-content: flex-end;/.test(codeAdminCss), "heading actions remain beside the class selector until narrow phones need a full right-aligned row");
+assertTrue(/@media \(max-width: 760px\)[\s\S]*?#codeAdminApp \.code-values-table-wrap \.table > tbody > tr > td\.description-cell\s*\{[^}]*display: flex;[^}]*flex-wrap: wrap;[^}]*align-items: baseline;[^}]*grid-area: description;[^}]*width: 100%;[^}]*min-width: 0;[^}]*max-width: 100%;[^}]*gap: 0 0\.5rem;[\s\S]*?\.description-cell \.admin-inline-edit\s*\{[^}]*flex: 0 1 auto;[^}]*width: auto;[\s\S]*?\.description-cell \.description-inline-edit--long\s*\{[^}]*flex: 1 1 12rem;[^}]*margin-top: 0;/.test(codeAdminCss), "mobile description cells use the table-cell-specific flex rule and retain compact editors");
+assertTrue(/@media \(max-width: 760px\)[\s\S]*?grid-template-columns: auto 2rem minmax\(0, 1fr\) 5\.5rem;[\s\S]*?"select rank value status"[\s\S]*?"description description description description"/.test(codeAdminCss) && !codeAdminCss.includes("rank-cell::before") && !workspaceJs.includes('data-label="Rank"'), "mobile cards retain rank in a compact first row and descriptions in the second without a generated Rank label");
+assertTrue(editorJs.includes('v-if="editor.mode === \'edit\'"') && editorJs.includes('for="codeValueRank"') && editorJs.includes('type="number" min="1" step="1"') && editorJs.includes("editor.isProtected || editor.inactive") && !editorJs.includes("editor.mode === 'create'"), "detail editing exposes Rank only in edit mode and disables it for protected or non-active values");
+assertTrue(appJs.includes("originalOrderBy: item.orderBy") && appJs.includes("const rankChanged") && appJs.includes("Rank must be a positive whole number.") && appJs.includes('action=position') && appJs.includes("newPosition: requestedRank"), "Save tracks the original rank and persists a valid changed rank through the position endpoint");
+assertTrue(/\.description-cell \.admin-inline-edit__display\s*\{[^}]*border-bottom: 1px dashed currentColor;/.test(codeAdminCss), "description targets retain the shared dashed underline treatment");
+assertTrue((workspaceJs.match(/CodeAdminComponents\.Workspace/g) || []).length === 1 && !/\/\*[\s\S]*\*\/$/.test(read(__filename)), "the file contains one active workspace suite with no trailing block-comment duplicate");
 
-if (failures > 0) {
-    process.exit(1);
-}
-
+if (failures > 0) { process.exit(1); }
 console.log("All Code Admin workspace UI tests passed.");

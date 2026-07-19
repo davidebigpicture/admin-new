@@ -2,6 +2,10 @@
     margin-bottom: 1rem;
 }
 
+#codeAdminApp {
+    min-width: 0;
+}
+
 #codeAdminApp .code-admin-workspace {
     padding: 0;
     overflow: hidden;
@@ -29,26 +33,33 @@
 #codeAdminApp .code-admin-panel-heading .class-filter {
     display: flex;
     align-items: center;
-    gap: 0.45rem;
+    flex-wrap: wrap;
+    gap: 0.65rem;
     margin: 0;
 }
 
-#codeAdminApp .code-admin-panel-heading .class-filter .control-label {
-    margin: 0;
-    color: #334155;
+#codeAdminApp .class-filter .admin-inline-edit {
+    min-width: 0;
+    max-width: 100%;
+}
+
+#codeAdminApp .class-filter .admin-inline-edit__display {
+    color: #1e293b;
+    font-size: 1.45rem;
+    font-weight: 600;
+    line-height: 1.25;
+    text-align: left;
+}
+
+#codeAdminApp .class-admin-link {
     font-size: 0.82rem;
-}
-
-#codeAdminApp .code-admin-panel-heading .class-filter .form-control {
-    width: min(30rem, 50vw);
-    height: 30px;
-    padding: 5px 8px;
-    font-size: 12px;
 }
 
 #codeAdminApp .code-admin-actions {
     display: flex;
     flex-wrap: wrap;
+    flex: 0 0 auto;
+    margin-left: auto;
     justify-content: flex-end;
     gap: 0.4rem;
 }
@@ -57,13 +68,6 @@
 #codeAdminApp .btn-group-sm > .btn {
     min-height: 30px;
     padding: 5px 10px;
-    font-size: 12px;
-    line-height: 1.5;
-}
-
-#codeAdminApp .btn-group-xs > .btn {
-    min-height: 22px;
-    padding: 1px 5px;
     font-size: 12px;
     line-height: 1.5;
 }
@@ -85,12 +89,6 @@
     margin: 0;
 }
 
-#codeAdminApp .code-admin-filters .control-label {
-    margin-bottom: 0.2rem;
-    color: #475569;
-    font-size: 0.82rem;
-}
-
 #codeAdminApp .code-admin-filters .form-control {
     height: 30px;
     padding: 5px 8px;
@@ -103,16 +101,32 @@
 
 #codeAdminApp .search-filter .form-control {
     width: 100%;
+    padding-left: 2.1rem;
+}
+
+#codeAdminApp .search-control {
+    position: relative;
+}
+
+#codeAdminApp .search-control .fa-search {
+    position: absolute;
+    top: 8px;
+    left: 8px;
+    z-index: 1;
+    color: #64748b;
+    pointer-events: none;
 }
 
 #codeAdminApp .code-values-table-wrap {
     margin: 0;
+    overflow-x: visible;
     border: 1px solid #dbe2ea;
     border-radius: 3px;
 }
 
 #codeAdminApp .code-values-table-wrap .table {
-    min-width: 820px;
+    width: 100%;
+    table-layout: fixed;
     margin-bottom: 0;
 }
 
@@ -127,6 +141,7 @@
 
 #codeAdminApp .table > tbody > tr > td {
     padding: 0.55rem 0.6rem;
+    background-color: transparent;
     vertical-align: middle;
 }
 
@@ -138,55 +153,116 @@
     background-color: #fffde8;
 }
 
-#codeAdminApp .code-value-row--inactive > td {
+#codeAdminApp .code-value-row--inactive {
     color: #64748b;
     background-color: #f1f5f9;
 }
 
+#codeAdminApp .code-value-row--archived {
+    color: #6b7280;
+    background-color: #f4f3f6;
+}
+
 #codeAdminApp .rank-cell {
-    width: 5rem;
+    width: 3.5rem;
     text-align: center;
 }
 
-#codeAdminApp .select-cell {
+#codeAdminApp .rank-cell .admin-inline-edit__display {
+    min-width: 1.125rem;
+    min-height: 1.5rem;
+    border-bottom: 1px dashed #aeb8c4;
+    color: #aeb8c4;
+}
+
+#codeAdminApp .rank-cell .admin-inline-edit__display:hover,
+#codeAdminApp .rank-cell .admin-inline-edit__display:focus,
+#codeAdminApp .rank-cell .admin-inline-edit:focus-within .admin-inline-edit__display {
+    border-bottom-color: #64748b;
+    color: #64748b;
+}
+
+#codeAdminApp .rank-cell .admin-inline-edit__input {
     width: 2.5rem;
+    min-width: 2.5rem;
+    text-align: center;
+}
+
+#codeAdminApp .description-cell .admin-inline-edit__input,
+#codeAdminApp .rank-cell .admin-inline-edit__input {
+    box-sizing: border-box;
+    border: 1px solid #aeb8c4;
+    border-radius: 3px;
+    background: #fff;
+    outline: 0;
+    box-shadow: none;
+}
+
+#codeAdminApp .description-cell .admin-inline-edit__input:focus,
+#codeAdminApp .description-cell .admin-inline-edit__input:focus-visible,
+#codeAdminApp .rank-cell .admin-inline-edit__input:focus,
+#codeAdminApp .rank-cell .admin-inline-edit__input:focus-visible {
+    border-color: #2563eb;
+    outline: 0;
+    box-shadow: none;
+}
+
+#codeAdminApp .select-cell {
+    width: 2.25rem;
     text-align: center;
 }
 
 #codeAdminApp .status-cell {
-    width: 6.5rem;
-    white-space: nowrap;
-}
-
-#codeAdminApp .action-cell {
-    width: 12.5rem;
-    white-space: nowrap;
+    width: 5.5rem;
+    text-align: right;
 }
 
 #codeAdminApp .value-cell {
-    width: 10rem;
+    width: 18rem;
 }
 
-#codeAdminApp .description-cell {
-    min-width: 18rem;
+#codeAdminApp .value-cell .code-value {
+    display: block;
+    max-width: 100%;
+    overflow-wrap: normal;
+    white-space: nowrap;
+    word-break: normal;
+    text-align: left;
 }
 
-#codeAdminApp .rank-control {
-    width: 3.75rem;
-    height: 28px;
-    padding: 3px 4px;
-    border: 1px solid #aeb8c4;
-    border-radius: 3px;
-    background: #fff;
-    color: #334155;
-    font: inherit;
-    text-align: center;
+#codeAdminApp .description-cell .admin-inline-edit {
+    display: block;
+    width: 100%;
+    min-width: 0;
+    max-width: 100%;
 }
 
-#codeAdminApp .rank-control:focus {
-    border-color: #337ab7;
-    box-shadow: 0 0 0 2px rgba(51, 122, 183, 0.18);
-    outline: 0;
+#codeAdminApp .description-cell .admin-inline-edit__display {
+    display: inline-block;
+    min-width: 1rem;
+    min-height: 1.5rem;
+    border-bottom: 1px dashed currentColor;
+    white-space: normal;
+    text-align: left;
+}
+
+#codeAdminApp .description-cell .description-inline-edit--long {
+    margin-top: 0.25rem;
+    color: var(--shell-muted);
+    font-size: 0.82rem;
+    transition: opacity 120ms ease;
+}
+
+#codeAdminApp .description-cell .admin-inline-edit__input--textarea {
+    width: 100%;
+}
+
+#codeAdminApp .description-cell,
+#codeAdminApp .description-cell .admin-inline-edit__display,
+#codeAdminApp .code-value-description,
+#codeAdminApp .long-desc {
+    overflow-wrap: anywhere;
+    word-break: break-word;
 }
 
 #codeAdminApp .rank-unavailable {
@@ -194,15 +270,31 @@
 }
 
 #codeAdminApp .code-value {
+    min-height: 1.5rem;
     padding: 0;
     border: 0;
     background: transparent;
-    color: #1e293b;
+    color: #337ab7;
     font-weight: 600;
-    text-decoration: underline;
+    text-decoration: none;
+}
+
+#codeAdminApp .code-value:hover {
+    background: #eef6fc;
+    color: #23527c;
+    text-decoration: none;
+}
+
+#codeAdminApp .code-value:focus {
+    background: #eef6fc;
+    color: #23527c;
+    outline: 2px solid #337ab7;
+    outline-offset: 2px;
+    text-decoration: none;
 }
 
 #codeAdminApp .long-desc {
+    display: block;
     margin-top: 0.25rem;
     color: var(--shell-muted);
     font-size: 0.82rem;
@@ -210,66 +302,6 @@
 
 #codeAdminApp .code-value-description {
     color: #64748b;
-}
-
-#codeAdminApp .status-indicator {
-    display: inline-flex;
-    align-items: center;
-    gap: 0.4rem;
-    color: #475569;
-    font-size: 0.82rem;
-}
-
-#codeAdminApp .status-indicator::before {
-    width: 0.5rem;
-    height: 0.5rem;
-    border-radius: 50%;
-    background: #94a3b8;
-    content: "";
-}
-
-#codeAdminApp .status-indicator--active::before {
-    background: #3c9a5f;
-}
-
-#codeAdminApp .row-actions {
-    display: flex;
-    align-items: center;
-    gap: 0.85rem;
-}
-
-#codeAdminApp .row-action {
-    min-height: 0;
-    padding: 0;
-    border: 0;
-    background: transparent;
-    color: #286090;
-    font-size: 0.82rem;
-    font-weight: 500;
-    white-space: nowrap;
-}
-
-#codeAdminApp .row-action:hover,
-#codeAdminApp .row-action:focus {
-    border: 0;
-    background: transparent;
-    color: #163f63;
-    text-decoration: underline;
-}
-
-#codeAdminApp .row-action--danger {
-    color: #a94442;
-}
-
-#codeAdminApp .row-action--danger:hover,
-#codeAdminApp .row-action--danger:focus {
-    color: #843534;
-}
-
-#codeAdminApp .protected-value {
-    color: #64748b;
-    font-size: 0.82rem;
-    font-style: italic;
 }
 
 #codeAdminApp .code-admin-empty {
@@ -282,6 +314,22 @@
     justify-content: space-between;
     gap: 1rem;
     margin-top: 1rem;
+}
+
+#codeAdminApp .code-admin-pager .btn-default:hover,
+#codeAdminApp .code-admin-pager .btn-default:focus {
+    border-color: #94a3b8;
+    background-color: #e2e8f0;
+    color: #1e293b;
+}
+
+#codeAdminApp .code-admin-pager .btn-default.disabled:hover,
+#codeAdminApp .code-admin-pager .btn-default.disabled:focus,
+#codeAdminApp .code-admin-pager .btn-default[disabled]:hover,
+#codeAdminApp .code-admin-pager .btn-default[disabled]:focus {
+    border-color: #cbd5e1;
+    background-color: #f8fafc;
+    color: #64748b;
 }
 
 #codeAdminApp .code-admin-page-status {
@@ -355,11 +403,24 @@
     min-height: 34px;
     margin: 0;
     border: 0;
-    padding-top: 7px;
+    padding-top: 0;
 }
 
 #codeAdminApp .code-admin-radio-options .radio-inline {
     margin: 0;
+    color: #333;
+    font-size: 14px;
+    font-weight: 700;
+    line-height: 1.42857143;
+}
+
+#codeAdminApp .code-admin-radio-options legend {
+    flex-basis: 100%;
+    margin: 0 0 0.3rem;
+    border: 0;
+    color: #334155;
+    font-size: 14px;
+    font-weight: 600;
 }
 
 #codeAdminApp .editor-grid select[multiple] {
@@ -373,18 +434,12 @@
 }
 
 @media (max-width: 860px) {
-    #codeAdminApp .code-admin-panel-heading,
+    #codeAdminApp .code-admin-panel-heading {
+        flex-wrap: wrap;
+    }
+
     #codeAdminApp .code-admin-pager,
     #codeAdminApp .editor-panel-heading {
-        align-items: stretch;
-        flex-direction: column;
-    }
-
-    #codeAdminApp .code-admin-actions {
-        justify-content: flex-start;
-    }
-
-    #codeAdminApp .code-admin-panel-heading .class-filter {
         align-items: stretch;
         flex-direction: column;
     }
@@ -417,5 +472,119 @@
     #codeAdminApp .code-admin-page-status span {
         display: block;
         margin: 0.2rem 0 0;
+    }
+}
+
+@media (max-width: 600px) {
+    #codeAdminApp .code-admin-actions {
+        flex: 0 0 100%;
+        width: 100%;
+        margin-left: 0;
+        justify-content: flex-end;
+    }
+}
+
+@media (min-width: 761px) {
+    #codeAdminApp .code-values-table-wrap .table > tbody > tr:not(:hover):not(:focus-within) .description-inline-edit--long.description-inline-edit--empty {
+        opacity: 0;
+    }
+}
+
+@media (max-width: 760px) {
+    #codeAdminApp .code-values-table-wrap {
+        max-width: 100%;
+        overflow: visible;
+        border: 0;
+    }
+
+    #codeAdminApp .code-values-table-wrap .table {
+        display: block;
+        max-width: 100%;
+        table-layout: auto;
+    }
+
+    #codeAdminApp .code-values-table-wrap .table > thead {
+        display: none;
+    }
+
+    #codeAdminApp .code-values-table-wrap .table > tbody {
+        display: grid;
+        gap: 0.5rem;
+    }
+
+    #codeAdminApp .code-values-table-wrap .table > tbody > tr {
+        display: grid;
+        grid-template-columns: auto 2rem minmax(0, 1fr) 5.5rem;
+        grid-template-areas:
+            "select rank value status"
+            "description description description description";
+        gap: 0.4rem;
+        padding: 0.55rem;
+        border: 1px solid #dbe2ea;
+        border-radius: 3px;
+    }
+
+    #codeAdminApp .code-values-table-wrap .table > tbody > tr > td {
+        display: block;
+        width: auto;
+        min-width: 0;
+        padding: 0;
+        border: 0;
+    }
+
+    #codeAdminApp .code-values-table-wrap .select-cell {
+        grid-area: select;
+        align-self: center;
+    }
+
+    #codeAdminApp .code-values-table-wrap .value-cell {
+        grid-area: value;
+        min-width: 0;
+    }
+
+    #codeAdminApp .code-values-table-wrap .status-cell {
+        grid-area: status;
+        align-self: center;
+    }
+
+    #codeAdminApp .code-values-table-wrap .rank-cell {
+        grid-area: rank;
+        align-items: center;
+        text-align: center;
+    }
+
+    #codeAdminApp .code-values-table-wrap .table > tbody > tr > td.description-cell {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: baseline;
+        grid-area: description;
+        width: 100%;
+        min-width: 0;
+        max-width: 100%;
+        gap: 0 0.5rem;
+    }
+
+    #codeAdminApp .description-cell .admin-inline-edit {
+        flex: 0 1 auto;
+        width: auto;
+    }
+
+    #codeAdminApp .description-cell .description-inline-edit--long {
+        flex: 1 1 12rem;
+        margin-top: 0;
+    }
+
+    #codeAdminApp .code-values-table-wrap .value-cell .code-value {
+        font-size: 0.78rem;
+        line-height: 1.5rem;
+    }
+
+    #codeAdminApp .description-cell .admin-inline-edit__input--textarea {
+        box-sizing: border-box;
+        width: 100%;
+    }
+
+    #codeAdminApp .description-cell .description-inline-edit--long.description-inline-edit--empty {
+        opacity: 0.55;
     }
 }

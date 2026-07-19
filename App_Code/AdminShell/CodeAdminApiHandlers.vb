@@ -240,6 +240,10 @@ Public Class CodeAdminValuesHandler
                     Dim body = PilotJsonApi.ReadJsonBody(Of CodeValueLifecycleCommand)(context)
                     service.DeactivateValue(body)
                     PilotJsonApi.WriteJson(context, 200, New Dictionary(Of String, Object) From {{"updated", True}})
+                Case "status"
+                    Dim body = PilotJsonApi.ReadJsonBody(Of CodeValueLifecycleCommand)(context)
+                    service.SetStatus(body)
+                    PilotJsonApi.WriteJson(context, 200, New Dictionary(Of String, Object) From {{"updated", True}})
                 Case "position"
                     Dim body = PilotJsonApi.ReadJsonBody(Of CodeValuePositionCommand)(context)
                     service.SetPosition(body)
@@ -283,6 +287,7 @@ Public Class CodeAdminValuesHandler
             {"codeValue", value.CodeValue},
             {"codeValueDesc", value.CodeValueDesc},
             {"codeValueLongDesc", value.CodeValueLongDesc},
+            {"status", value.Status},
             {"inactive", value.Inactive},
             {"majorCode", value.MajorCode},
             {"minorCode", value.MinorCode},

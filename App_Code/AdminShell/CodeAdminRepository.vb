@@ -396,46 +396,33 @@ Public Class CodeAdminRepository
         }
     End Function
 
-    Public Sub ActivateValue(codeClass As String, codeValue As String, majorCode As String) Implements ICodeAdminRepository.ActivateValue
+    Public Sub SetStatus(codeClass As String, codeValue As String, status As String) Implements ICodeAdminRepository.SetStatus
         Const sql As String =
-            "update code_value set inactive = 'N' " &
-            "where code_class = ? and code_value = ? and major_code = ?"
+            "update code_value set inactive = ? " &
+            "where code_class = ? and code_value = ?"
 
         Using connection As New OleDbConnection(_connectionString)
             connection.Open()
             Using transaction = connection.BeginTransaction(), command As New OleDbCommand(sql, connection, transaction)
-                Dim activeValues = ListActiveValuesForPosition(codeClass, connection, transaction)
+                Dim activeValues As List(Of String) = Nothing
+                If String.Equals(status, CodeAdminConstants.StatusActive, StringComparison.OrdinalIgnoreCase) Then
+                    activeValues = ListActiveValuesForPosition(codeClass, connection, transaction)
+                End If
+                command.Parameters.Add("@inactive", OleDbType.VarChar, 1).Value = status
                 command.Parameters.Add("@code_class", OleDbType.VarChar, 50).Value = codeClass
                 command.Parameters.Add("@code_value", OleDbType.VarChar, 50).Value = codeValue
-                command.Parameters.Add("@major_code", OleDbType.VarChar, 50).Value = majorCode
                 Dim affected = command.ExecuteNonQuery()
                 If affected = 0 Then
                     Throw New AccessManagerValidationException("Code value was not found.")
                 End If
-                If activeValues.FindIndex(Function(item) String.Equals(item, codeValue, StringComparison.OrdinalIgnoreCase)) < 0 Then
-                    activeValues.Add(codeValue)
+                If activeValues IsNot Nothing Then
+                    If activeValues.FindIndex(Function(item) String.Equals(item, codeValue, StringComparison.OrdinalIgnoreCase)) < 0 Then
+                        activeValues.Add(codeValue)
+                    End If
+                    UpdatePositions(codeClass, activeValues, connection, transaction)
                 End If
-                UpdatePositions(codeClass, activeValues, connection, transaction)
                 transaction.Commit()
             End Using
-        End Using
-    End Sub
-
-    Public Sub DeactivateValue(codeClass As String, codeValue As String, majorCode As String) Implements ICodeAdminRepository.DeactivateValue
-        Const sql As String =
-            "update code_value set inactive = 'Y' " &
-            "where code_class = ? and code_value = ? and major_code = ?"
-
-        Using connection As New OleDbConnection(_connectionString),
-              command As New OleDbCommand(sql, connection)
-            command.Parameters.Add("@code_class", OleDbType.VarChar, 50).Value = codeClass
-            command.Parameters.Add("@code_value", OleDbType.VarChar, 50).Value = codeValue
-            command.Parameters.Add("@major_code", OleDbType.VarChar, 50).Value = majorCode
-            connection.Open()
-            Dim affected = command.ExecuteNonQuery()
-            If affected = 0 Then
-                Throw New AccessManagerValidationException("Code value was not found.")
-            End If
         End Using
     End Sub
 
@@ -686,13 +673,15 @@ Public Class CodeAdminRepository
 
     Private Shared Function ReadValue(reader As IDataRecord) As CodeAdminValue
         Dim codeValue = DbString(ReaderValue(reader, "code_value"))
+        Dim status = DbString(ReaderValue(reader, "inactive")).Trim().ToUpperInvariant()
         Return New CodeAdminValue With {
             .CodeValueId = Convert.ToInt32(ReaderValue(reader, "code_value_id"), CultureInfo.InvariantCulture),
             .CodeClass = DbString(ReaderValue(reader, "code_class")),
             .CodeValue = codeValue,
             .CodeValueDesc = DbString(ReaderValue(reader, "code_value_desc")),
             .CodeValueLongDesc = DbString(ReaderValue(reader, "code_value_long_desc")),
-            .Inactive = String.Equals(DbString(ReaderValue(reader, "inactive")), CodeAdminConstants.InactiveYes, StringComparison.OrdinalIgnoreCase),
+            .Status = status,
+            .Inactive = Not String.Equals(status, CodeAdminConstants.StatusActive, StringComparison.OrdinalIgnoreCase),
             .MajorCode = DbString(ReaderValue(reader, "major_code")),
             .MinorCode = DbString(ReaderValue(reader, "minor_code")),
             .OrderBy = DbNullableInt(ReaderValue(reader, "order_by")),

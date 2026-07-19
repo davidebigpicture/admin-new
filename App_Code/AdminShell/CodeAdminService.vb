@@ -178,18 +178,23 @@ Public Class CodeAdminService
         Return results
     End Function
 
-    Public Sub ActivateValue(command As CodeValueLifecycleCommand)
+    Public Sub SetStatus(command As CodeValueLifecycleCommand)
         ValidateLifecycleCommand(command)
+        Dim status = If(command.Status, String.Empty).Trim().ToUpperInvariant()
+        If Not CodeAdminConstants.IsLifecycleStatus(status) Then
+            Throw New AccessManagerValidationException("Status must be Active, Inactive, or Archived.")
+        End If
         EnsureEditableClass(command.CodeClass)
         RequireMutableValue(command.CodeClass, command.CodeValue)
-        _repository.ActivateValue(command.CodeClass, command.CodeValue, RequireMajorCode())
+        _repository.SetStatus(command.CodeClass, command.CodeValue, status)
+    End Sub
+
+    Public Sub ActivateValue(command As CodeValueLifecycleCommand)
+        SetStatus(New CodeValueLifecycleCommand With {.CodeClass = command.CodeClass, .CodeValue = command.CodeValue, .Status = CodeAdminConstants.StatusActive})
     End Sub
 
     Public Sub DeactivateValue(command As CodeValueLifecycleCommand)
-        ValidateLifecycleCommand(command)
-        EnsureEditableClass(command.CodeClass)
-        RequireMutableValue(command.CodeClass, command.CodeValue)
-        _repository.DeactivateValue(command.CodeClass, command.CodeValue, RequireMajorCode())
+        SetStatus(New CodeValueLifecycleCommand With {.CodeClass = command.CodeClass, .CodeValue = command.CodeValue, .Status = CodeAdminConstants.StatusInactive})
     End Sub
 
     Public Sub SetPosition(command As CodeValuePositionCommand)
@@ -197,7 +202,7 @@ Public Class CodeAdminService
             Throw New AccessManagerValidationException("Position request is not valid.")
         End If
         CodeAdminValidation.ValidateCodeClass(command.CodeClass)
-        CodeAdminValidation.ValidateCodeValue(command.CodeValue)
+        CodeAdminValidation.ValidateExistingCodeValueReference(command.CodeValue)
         If command.NewPosition < 1 Then
             Throw New AccessManagerValidationException("Position must be a positive number.")
         End If
@@ -238,7 +243,7 @@ Public Class CodeAdminService
             Throw New AccessManagerValidationException("Update request is not valid.")
         End If
         CodeAdminValidation.ValidateCodeClass(command.CodeClass)
-        CodeAdminValidation.ValidateCodeValue(command.CodeValue)
+        CodeAdminValidation.ValidateExistingCodeValueReference(command.CodeValue)
         CodeAdminValidation.ValidateDescription(command.CodeValueDesc)
         CodeAdminValidation.ValidateLongDescription(command.CodeValueLongDesc)
         ValidateDetailFields(command.FormDisplay, GetOptionValues(command))
@@ -466,7 +471,7 @@ Public Class CodeAdminService
             Throw New AccessManagerValidationException("Lifecycle request is not valid.")
         End If
         CodeAdminValidation.ValidateCodeClass(command.CodeClass)
-        CodeAdminValidation.ValidateCodeValue(command.CodeValue)
+        CodeAdminValidation.ValidateExistingCodeValueReference(command.CodeValue)
     End Sub
 
     Private Sub EnsureEditableClass(codeClass As String)

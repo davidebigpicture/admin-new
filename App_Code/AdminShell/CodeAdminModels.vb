@@ -1,26 +1,6 @@
 Imports System
 Imports System.Collections.Generic
 
-Public NotInheritable Class CodeAdminConstants
-    Private Sub New()
-    End Sub
-
-    Public Const PilotRoute As String = "managed/code-admin/index.aspx"
-    Public Const CanonicalRoute As String = "cgi-bin/codeadminO.pl"
-    Public Const InactiveYes As String = "Y"
-    Public Const InactiveNo As String = "N"
-    Public Const ProtectedValueDevDomain As String = "DEV_DOMAIN"
-    Public Const ProtectedClassGroupType As String = "GROUP_TY_CD"
-    Public Const ProtectedClassApplicationDb As String = "APPLICATION_DB"
-    Public Const DefaultPageSize As Integer = 200
-    Public Const MaxPageSize As Integer = 500
-    Public Const MaxSearchLength As Integer = 100
-    Public Const MaxCodeValueLength As Integer = 50
-    Public Const MaxDescriptionLength As Integer = 1000
-    Public Const MaxLongDescriptionLength As Integer = 4000
-    Public Const MaxOptionalValueLength As Integer = 1000
-End Class
-
 <Serializable>
 Public Class CodeAdminClass
     Public Property CodeClass As String
@@ -35,6 +15,7 @@ Public Class CodeAdminValue
     Public Property CodeValue As String
     Public Property CodeValueDesc As String
     Public Property CodeValueLongDesc As String
+    Public Property Status As String
     Public Property Inactive As Boolean
     Public Property MajorCode As String
     Public Property MinorCode As String
@@ -164,6 +145,7 @@ End Class
 Public Class CodeValueLifecycleCommand
     Public Property CodeClass As String
     Public Property CodeValue As String
+    Public Property Status As String
 End Class
 
 Public Class CodeValuePositionCommand

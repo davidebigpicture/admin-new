@@ -1,662 +1,243 @@
-"use strict";
+﻿"use strict";
 
-(function () {
-    const stateApi = window.CodeAdminState;
-    const viewModel = window.CodeAdminViewModel;
-    const root = document.getElementById("codeAdminApp");
-    const messageEl = document.getElementById("appMessage");
-    const userEl = document.getElementById("shellUser");
-    const userNameEl = document.getElementById("shellUserName");
+(function (global) {
+    const viewModel = global.CodeAdminViewModel;
     const pageSize = 200;
     let searchTimer = null;
-    let metadataRefreshTimer = null;
+    let metadataTimer = null;
     let loadSequence = 0;
     let editorRequestSequence = 0;
-    let rankUpdateInFlight = false;
+    let classChangeSequence = 0;
+    let routeSequence = 0;
+    let applyingPopstate = false;
 
-    function showMessage(message) {
-        if (!message) {
-            messageEl.hidden = true;
-            messageEl.textContent = "";
-            return;
-        }
-        messageEl.textContent = message;
-        messageEl.hidden = false;
-    }
-
-    function handleError(error) {
-        showMessage((error && error.message) || "The request could not be completed.");
-    }
-
-    function invalidateEditorRequests() {
-        return ++editorRequestSequence;
-    }
-
-    function escapeHtml(value) {
-        return String(value || "")
-            .replace(/&/g, "&amp;")
-            .replace(/</g, "&lt;")
-            .replace(/>/g, "&gt;")
-            .replace(/"/g, "&quot;");
-    }
-
-    function hasSelectedClass(state) {
-        return viewModel.hasSelectedClass(state.selectedClass);
-    }
-
-    function buildClassOptions(workspace, selectedClass) {
-        return viewModel.buildClassOptions(workspace, selectedClass);
-    }
-
-    function getSelectedClass(workspace, selectedClass) {
-        return viewModel.getSelectedClass(workspace, selectedClass);
-    }
-
-    function renderFormGroup(id, label, control, className) {
-        return (
-            '<div class="form-group ' + (className || "") + '">' +
-            '<label class="control-label" for="' + id + '">' + escapeHtml(label) + "</label> " +
-            control +
-            "</div>"
-        );
-    }
-
-    function renderMetadataField(field, editor) {
-        const value = viewModel.normalizeEditorValue(editor[field.key], field.controlType);
-        const required = field.required ? " required" : "";
-        const options = field.options || [];
-        const id = "detail-" + field.key;
-        let control;
-
-        if (field.controlType === "textarea") {
-            control = '<textarea class="form-control" id="' + id + '" name="' + field.key + '" rows="4"' + required + ">" + escapeHtml(value) + "</textarea>";
-        } else if (field.controlType === "radio") {
-            control = '<fieldset class="code-admin-radio-options" id="' + id + '" aria-required="' + (field.required ? "true" : "false") + '"><legend class="sr-only">' + escapeHtml(field.label) + '</legend>' + options.map(function (option, index) {
-                const checked = option.value === value ? " checked" : "";
-                const optionRequired = field.required && index === 0 ? " required" : "";
-                const optionId = id + "-" + index;
-                return '<label class="radio-inline" for="' + optionId + '"><input type="radio" id="' + optionId + '" name="' + field.key + '" value="' + escapeHtml(option.value) + '"' + checked + optionRequired + "> " + escapeHtml(option.label) + "</label>";
-            }).join("") + "</fieldset>";
-        } else if (field.controlType === "select" || field.controlType === "multiselect") {
-            const selectedValues = field.controlType === "multiselect" ? value.split(",").map(function (item) { return item.trim(); }).filter(Boolean) : [value];
-            const multiple = field.controlType === "multiselect" ? " multiple" : "";
-            const placeholder = field.controlType === "multiselect" ? "" : '<option value=""></option>';
-            control = '<select class="form-control" id="' + id + '" name="' + field.key + '"' + multiple + required + ">" + placeholder + options.map(function (option) {
-                const selected = selectedValues.indexOf(option.value) >= 0 ? " selected" : "";
-                return '<option value="' + escapeHtml(option.value) + '"' + selected + ">" + escapeHtml(option.label) + "</option>";
-            }).join("") + "</select>";
-        } else {
-            control = '<input class="form-control" id="' + id + '" name="' + field.key + '" value="' + escapeHtml(value) + '"' + required + ">";
-        }
-
-        return renderFormGroup(id, field.label, control, field.controlType === "textarea" ? "editor-field-wide" : "");
-    }
-
-    function renderEditor(editor) {
-        if (!editor) {
-            return "";
-        }
-
-        const isEdit = editor.mode === "edit";
-        const selectedClass = getSelectedClass(stateApi.get().workspace, stateApi.get().selectedClass);
-        const classContext = selectedClass
-            ? escapeHtml(selectedClass.codeClassDesc + " (" + selectedClass.codeClass + ")")
-            : escapeHtml(stateApi.get().selectedClass);
-        const editorTitle = isEdit ? "Edit " + escapeHtml(editor.codeValue) : "Add code value";
-        const valueField = isEdit
-            ? '<div class="form-group"><label class="control-label">Value</label><p class="form-control-static code-value-static">' + escapeHtml(editor.codeValue) + "</p></div>"
-            : renderFormGroup(
-                "codeValue",
-                "Value",
-                '<input class="form-control" id="codeValue" name="codeValue" value="' + escapeHtml(editor.codeValue || "") + '" required data-code-value>',
-                ""
-            );
-
-        const workspace = editor.fieldMetadata
-            ? { fieldMetadata: { [stateApi.get().selectedClass]: editor.fieldMetadata } }
-            : stateApi.get().workspace;
-        const detailFields = viewModel.getDetailFields(workspace, stateApi.get().selectedClass);
-        const metadataFields = detailFields.map(function (field) {
-            return renderMetadataField(field, editor);
-        }).join("");
-
-        return (
-            '<section class="editor-panel code-admin-workspace panel panel-default" aria-labelledby="codeValueEditorTitle">' +
-            '<div class="panel-heading editor-panel-heading"><div><h3 class="panel-title" id="codeValueEditorTitle">' + editorTitle + "</h3>" +
-            '<p class="editor-class-context">' + classContext + "</p></div>" +
-            '<button type="button" class="btn btn-default btn-sm" data-action="cancel-editor"><i class="fa fa-arrow-left" aria-hidden="true"></i> Back to list</button></div>' +
-            '<div class="panel-body">' +
-            '<form id="codeValueEditor">' +
-            '<div class="editor-grid">' +
-            valueField +
-            metadataFields +
-            "</div>" +
-            '<div class="editor-actions">' +
-            '<button type="submit" class="btn btn-primary btn-sm"><i class="fa fa-check" aria-hidden="true"></i> Save</button>' +
-            '<button type="button" class="btn btn-default btn-sm" data-action="cancel-editor">Cancel</button>' +
-            "</div>" +
-            "</form></div>" +
-            "</section>"
-        );
-    }
-
-    function renderTable(page, selectedIds, rankUpdating) {
-        if (!page || !page.items || page.items.length === 0) {
-            return '<div class="alert alert-info code-admin-empty">No code values found for this class.</div>';
-        }
-
-        const rows = page.items
-            .map(function (item) {
-                const checked = selectedIds[item.codeValueId] ? " checked" : "";
-                const rowClass = item.inactive ? "inactive code-value-row--inactive" : "";
-                const status = item.inactive ? "Inactive" : "Active";
-                const statusClass = item.inactive ? "status-indicator status-indicator--inactive" : "status-indicator status-indicator--active";
-                const encodedCodeValue = escapeHtml(item.codeValue);
-                const encodedCodeClass = escapeHtml(item.codeClass);
-                const rank = item.orderBy || "";
-                const rankControl = item.inactive || item.isProtected
-                    ? '<span class="rank-unavailable" aria-label="' + (item.isProtected ? "Protected" : "Inactive") + ' values are not ranked">&mdash;</span>'
-                    : '<input class="rank-control" type="number" min="1" step="1" value="' + rank + '" placeholder="Set" aria-label="Rank for ' + encodedCodeValue + '" data-rank-position data-class="' + encodedCodeClass + '" data-value="' + encodedCodeValue + '"' + (rankUpdating ? " disabled" : "") + ">";
-                const description = '<div class="code-value-description">' + escapeHtml(item.codeValueDesc) + "</div>";
-                const longDesc = item.codeValueLongDesc
-                    ? '<div class="long-desc">' + escapeHtml(item.codeValueLongDesc.slice(0, 200)) + (item.codeValueLongDesc.length >= 200 ? "..." : "") + "</div>"
-                    : "";
-
-                return (
-                    "<tr class=\"" + rowClass + "\">" +
-                    '<td class="select-cell"><input type="checkbox" aria-label="Select ' + encodedCodeValue + '" data-select-id="' + item.codeValueId + '"' + checked + (item.isProtected ? " disabled" : "") + "></td>" +
-                    '<td class="rank-cell">' + rankControl + "</td>" +
-                    '<td class="value-cell"><button type="button" class="code-value" data-action="edit" data-id="' + item.codeValueId + '">' + encodedCodeValue + "</button></td>" +
-                    '<td class="description-cell">' +
-                    description +
-                    longDesc +
-                    "</td>" +
-                    '<td class="status-cell"><span class="' + statusClass + '">' + status + "</span></td>" +
-                    '<td class="action-cell"><div class="row-actions" role="group" aria-label="Actions for ' + encodedCodeValue + '">' +
-                    (item.isProtected
-                        ? '<span class="protected-value">Protected</span>'
-                        : (item.inactive
-                                ? '<button type="button" class="row-action" data-action="activate" data-class="' + encodedCodeClass + '" data-value="' + encodedCodeValue + '"><i class="fa fa-play" aria-hidden="true"></i> Activate</button>'
-                                : '<button type="button" class="row-action row-action--danger" data-action="deactivate" data-class="' + encodedCodeClass + '" data-value="' + encodedCodeValue + '"><i class="fa fa-pause" aria-hidden="true"></i> Deactivate</button>')) +
-                    "</div></td>" +
-                    "</tr>"
-                );
-            })
-            .join("");
-
-        return (
-            '<div class="table-responsive code-values-table-wrap">' +
-            '<table class="table table-striped table-hover table-condensed">' +
-            '<thead><tr><th class="select-cell"><span class="sr-only">Select</span></th><th class="rank-cell">Rank</th><th class="value-cell">Code value</th><th class="description-cell">Description</th><th class="status-cell">Status</th><th class="action-cell">Actions</th></tr></thead>' +
-            "<tbody>" + rows + "</tbody>" +
-            "</table></div>"
-        );
-    }
-
-    function render(state) {
-        if (state.editor) {
-            root.innerHTML = renderEditor(state.editor);
-            return;
-        }
-
-        const workspace = state.workspace || { classes: [] };
-        const page = state.page || viewModel.emptyPage();
-        const total = page.totalCount || 0;
-        const end = Math.min(page.start + page.pageSize, total);
-        const hasPrev = page.start > 0;
-        const hasNext = end < total;
-        const pageCount = total === 0 ? 0 : Math.ceil(total / page.pageSize);
-        const pageNumber = total === 0 ? 0 : Math.floor(page.start / page.pageSize) + 1;
-        const selectedCount = Object.keys(state.selectedIds || {}).length;
-
-        const canModify = hasSelectedClass(state);
-        const addDisabled = canModify ? "" : " disabled";
-        const deleteDisabled = selectedCount > 0 ? "" : " disabled";
-
-        root.innerHTML =
-            '<section class="panel panel-default code-admin-workspace" aria-label="Code Admin workspace"' + (state.loading ? ' aria-busy="true"' : "") + ">" +
-            '<div class="panel-heading code-admin-panel-heading">' +
-            renderFormGroup(
-                "codeClassSelect",
-                "Class",
-                '<select class="form-control" id="codeClassSelect">' + buildClassOptions(workspace, state.selectedClass) + "</select>",
-                "class-filter"
-            ) +
-            '<div class="code-admin-actions">' +
-            '<button type="button" class="btn btn-primary btn-sm" data-action="add"' + addDisabled + '><i class="fa fa-plus" aria-hidden="true"></i> Add value</button>' +
-            (page.canDelete && canModify ? '<button type="button" class="btn btn-danger btn-sm" data-action="delete"' + deleteDisabled + '><i class="fa fa-trash" aria-hidden="true"></i> Delete selected (' + selectedCount + ")</button>" : "") +
-            "</div></div>" +
-            '<div class="panel-body">' +
-            '<div class="form-inline code-admin-filters" role="search" aria-label="Filter code values">' +
-            renderFormGroup(
-                "searchInput",
-                "Search",
-                '<input class="form-control" type="search" id="searchInput" value="' + escapeHtml(state.search) + '" placeholder="Code or description" autocomplete="off">',
-                "search-filter"
-            ) +
-            '<span class="sr-only" aria-live="polite">' + (state.loading ? "Loading code values" : "") + "</span>" +
-            "</div>" +
-            (canModify ? renderTable(page, state.selectedIds, state.rankUpdating) : '<div class="alert alert-info code-admin-empty">Select a class to view and manage code values.</div>') +
-            '<nav class="code-admin-pager" aria-label="Code value pages">' +
-            '<div class="btn-group btn-group-sm" role="group" aria-label="Page controls">' +
-            '<button type="button" class="btn btn-default" data-action="prev"' + (hasPrev ? "" : " disabled") + '><i class="fa fa-chevron-left" aria-hidden="true"></i> Previous</button>' +
-            '<button type="button" class="btn btn-default" data-action="next"' + (hasNext ? "" : " disabled") + '>Next <i class="fa fa-chevron-right" aria-hidden="true"></i></button>' +
-            "</div>" +
-            '<p class="code-admin-page-status"><strong>' + (total === 0 ? "0" : page.start + 1) + "–" + end + "</strong> of " + total + " items <span>Page " + pageNumber + " of " + pageCount + "</span></p>" +
-            "</nav>" +
-            "</div></section>";
-    }
-
-    async function loadValues() {
-        const state = stateApi.get();
-        const requestSequence = ++loadSequence;
-        if (!hasSelectedClass(state)) {
-            stateApi.set({ page: viewModel.emptyPage(), loading: false });
-            return;
-        }
-        stateApi.set({ loading: true });
-        const query =
-            "api/values.ashx?codeClass=" + encodeURIComponent(state.selectedClass) +
-            "&search=" + encodeURIComponent(state.search || "") +
-            "&start=" + encodeURIComponent(state.start);
-        try {
-            const page = await window.PilotApiClient.get(query);
-            if (requestSequence === loadSequence) {
-                stateApi.set({ page: page, loading: false });
-                showMessage("");
-            }
-        } catch (error) {
-            if (requestSequence !== loadSequence) {
-                return;
-            }
-            stateApi.set({ loading: false });
-            throw error;
-        }
-    }
-
-    async function loadWorkspace() {
-        const workspace = await window.PilotApiClient.get("api/workspace.ashx");
-        const selectedClass = workspace.defaultCodeClass || "";
-        stateApi.set({
-            workspace: workspace,
-            selectedClass: selectedClass,
-            start: 0,
-            selectedIds: {},
-            editor: null
-        });
-        await loadValues();
-    }
-
-    async function loadDetailMetadata(codeClass, codeValue) {
-        return window.PilotApiClient.get(
-            "api/values.ashx?metadata=true&codeClass=" + encodeURIComponent(codeClass) +
-            "&codeValue=" + encodeURIComponent(codeValue || "")
-        );
-    }
-
-    function captureEditorValues(form, editor) {
-        const values = Object.assign({}, editor);
-        Array.prototype.forEach.call(form.elements, function (control) {
-            if (!control.name) {
-                return;
-            }
-            if (control.tagName === "SELECT" && control.multiple) {
-                values[control.name] = Array.prototype.slice.call(control.selectedOptions).map(function (option) {
-                    return option.value;
-                }).join(", ");
-            } else {
-                values[control.name] = control.value;
-            }
-        });
-        return values;
-    }
-
-    async function refreshCreateMetadata(form) {
-        const state = stateApi.get();
-        const editor = state.editor;
-        if (!editor || editor.mode !== "create" || state.selectedClass !== "ORG_SUB_TY_CD") {
-            return;
-        }
-        const requestSequence = invalidateEditorRequests();
-        const selectedClass = state.selectedClass;
-        const codeValue = form.codeValue.value.trim();
-        try {
-            const metadata = await loadDetailMetadata(selectedClass, codeValue);
-            const currentState = stateApi.get();
-            const currentEditor = currentState.editor;
-            const currentForm = document.getElementById("codeValueEditor");
-            if (
-                requestSequence !== editorRequestSequence ||
-                !currentEditor ||
-                currentEditor !== editor ||
-                currentEditor.mode !== "create" ||
-                currentState.selectedClass !== selectedClass ||
-                !currentForm ||
-                !currentForm.isConnected ||
-                !currentForm.codeValue ||
-                currentForm.codeValue.value.trim() !== codeValue
-            ) {
-                return;
-            }
-            stateApi.set({ editor: Object.assign(captureEditorValues(currentForm, currentEditor), { fieldMetadata: metadata }) });
-        } catch (error) {
-            if (requestSequence === editorRequestSequence) {
-                throw error;
-            }
-        }
-    }
-
-    async function saveEditor(form) {
-        const state = stateApi.get();
-        if (!hasSelectedClass(state)) {
-            showMessage("Select a class before adding a code value.");
-            return;
-        }
-        const editor = state.editor;
-        const requestSequence = invalidateEditorRequests();
-        const payload = {
-            codeClass: state.selectedClass,
-            codeValue: editor.mode === "edit" ? editor.codeValue : form.codeValue.value.trim(),
-            codeValueDesc: "",
-            codeValueLongDesc: ""
-        };
-        viewModel.getPayloadFieldKeys(state.workspace, state.selectedClass).forEach(function (fieldKey) {
-            const control = form.elements[fieldKey];
-            if (control && control.tagName === "SELECT" && control.multiple) {
-                payload[fieldKey] = Array.prototype.slice.call(control.selectedOptions).map(function (option) {
-                    return option.value;
-                }).join(", ");
-            } else if (control) {
-                payload[fieldKey] = String(control.value || "").trim();
-            } else {
-                payload[fieldKey] = String(editor[fieldKey] || "").trim();
-            }
-        });
-
-        try {
-            if (editor.mode === "edit") {
-                payload.codeValueId = editor.codeValueId;
-                payload.codeValue = editor.codeValue;
-                await window.PilotApiClient.post("api/values.ashx?action=update", payload);
-            } else {
-                await window.PilotApiClient.post("api/values.ashx?action=create", payload);
-            }
-            if (requestSequence !== editorRequestSequence) {
-                return;
-            }
-            invalidateEditorRequests();
-            stateApi.set({ editor: null });
-            await loadValues();
-        } catch (error) {
-            if (requestSequence === editorRequestSequence) {
-                throw error;
-            }
-        }
-    }
-
-    async function deleteSelected() {
-        const state = stateApi.get();
-        const ids = Object.keys(state.selectedIds).map(Number);
-        if (!ids.length) {
-            showMessage("Select at least one code value to delete.");
-            return;
-        }
-        const confirmed = await window.PilotDialogs.confirm({
-            title: "Delete code values",
-            message: "Delete " + ids.length + " selected code value" + (ids.length === 1 ? "" : "s") + "? Values currently in use will be skipped.",
-            confirmLabel: "Delete",
-            cancelLabel: "Cancel",
-            danger: true
-        });
-        if (!confirmed) {
-            return;
-        }
-        const result = await window.PilotApiClient.post("api/values.ashx?action=delete", {
-            codeValueIds: ids
-        });
-        const skipped = (result.results || []).filter(function (item) {
-            return item.skippedInUse;
-        });
-        stateApi.clearSelected();
-        await loadValues();
-        if (skipped.length) {
-            showMessage(skipped.map(function (item) { return item.message; }).join(" "));
-        }
-    }
-
-    function bindEvents() {
-        root.addEventListener("click", async function (event) {
-            const target = event.target.closest("[data-action]");
-            if (!target) {
-                return;
-            }
-
-            const action = target.getAttribute("data-action");
-            const state = stateApi.get();
-
-            try {
-                if (action === "prev") {
-                    invalidateEditorRequests();
-                    stateApi.set({
-                        start: Math.max(0, state.start - pageSize),
-                        selectedIds: {},
-                        editor: null
-                    });
-                    await loadValues();
-                } else if (action === "next") {
-                    invalidateEditorRequests();
-                    stateApi.set({
-                        start: state.start + pageSize,
-                        selectedIds: {},
-                        editor: null
-                    });
-                    await loadValues();
-                } else if (action === "add") {
-                    if (!viewModel.canOpenAddEditor(state.selectedClass)) {
-                        showMessage("Select a class before adding a code value.");
-                        return;
-                    }
-                    const requestSequence = invalidateEditorRequests();
-                    const selectedClass = state.selectedClass;
-                    try {
-                        const metadata = await loadDetailMetadata(selectedClass, "");
-                        if (requestSequence !== editorRequestSequence || stateApi.get().selectedClass !== selectedClass) {
-                            return;
-                        }
-                        stateApi.set({
-                            editor: {
-                                mode: "create",
-                                codeValue: "",
-                                codeValueDesc: "",
-                                codeValueLongDesc: "",
-                                fieldMetadata: metadata
-                            }
-                        });
-                        const firstField = document.getElementById("codeValue");
-                        if (firstField) {
-                            firstField.focus();
-                        }
-                    } catch (error) {
-                        if (requestSequence === editorRequestSequence) {
-                            throw error;
-                        }
-                    }
-                } else if (action === "cancel-editor") {
-                    invalidateEditorRequests();
-                    stateApi.set({ editor: null });
-                } else if (action === "delete") {
-                    await deleteSelected();
-                } else if (action === "edit") {
-                    const requestSequence = invalidateEditorRequests();
-                    const selectedClass = state.selectedClass;
-                    const codeValueId = target.getAttribute("data-id");
-                    try {
-                        const item = await window.PilotApiClient.get("api/values.ashx?id=" + encodeURIComponent(codeValueId));
-                        if (requestSequence !== editorRequestSequence || stateApi.get().selectedClass !== selectedClass) {
-                            return;
-                        }
-                        stateApi.set({
-                            editor: Object.assign({ mode: "edit" }, item)
-                        });
-                        const descriptionField = document.getElementById("detail-codeValueDesc") || document.querySelector("#codeValueEditor input, #codeValueEditor textarea, #codeValueEditor select");
-                        if (descriptionField) {
-                            descriptionField.focus();
-                        }
-                    } catch (error) {
-                        if (requestSequence === editorRequestSequence) {
-                            throw error;
-                        }
-                    }
-                } else if (action === "activate" || action === "deactivate") {
-                    await window.PilotApiClient.post("api/values.ashx?action=" + action, {
-                        codeClass: target.getAttribute("data-class"),
-                        codeValue: target.getAttribute("data-value")
-                    });
-                    await loadValues();
-                }
-            } catch (error) {
-                handleError(error);
-            }
-        });
-
-        root.addEventListener("change", async function (event) {
-            if (event.target.id === "codeClassSelect") {
-                const selectedClass = event.target.value;
-                invalidateEditorRequests();
-                stateApi.set({
-                    selectedClass: selectedClass,
-                    start: 0,
-                    selectedIds: {},
-                    editor: null
-                });
-                if (selectedClass) {
-                    loadValues().catch(handleError);
-                } else {
-                    stateApi.set({ page: viewModel.emptyPage() });
-                    showMessage("");
-                }
-            } else if (event.target.matches("[data-select-id]")) {
-                stateApi.toggleSelected(Number(event.target.getAttribute("data-select-id")), event.target.checked);
-            } else if (event.target.matches("[data-rank-position]")) {
-                const rankControl = event.target;
-                const newPosition = Number(rankControl.value);
-                if (!Number.isInteger(newPosition) || newPosition < 1) {
-                    showMessage("Rank must be a positive whole number.");
-                    rankControl.focus();
-                    return;
-                }
-                if (rankUpdateInFlight) {
-                    return;
-                }
-                rankUpdateInFlight = true;
-                stateApi.set({ rankUpdating: true });
+    const app = global.Vue.createApp({
+        components: global.CodeAdminComponents,
+        data: function () {
+            return { workspace: { classes: [] }, page: viewModel.emptyPage(), selectedClass: "", search: "", start: 0, loading: false, selectedIds: {}, editor: null, rankUpdating: false, statusUpdatingId: null, message: "" };
+        },
+        computed: { hasSelectedClass: function () { return viewModel.hasSelectedClass(this.selectedClass); } },
+        methods: {
+            handleError: function (error) { this.message = (error && error.message) || "The request could not be completed."; },
+            invalidateEditorRequests: function () { editorRequestSequence += 1; return editorRequestSequence; },
+            clearSelected: function () { this.selectedIds = {}; },
+            getClassInfo: function (codeClass) { return viewModel.getSelectedClass(this.workspace, codeClass); },
+            writeListRoute: function (mode) {
+                const navigation = global.CodeAdminNavigation;
+                global.document.title = navigation.classTitle(this.getClassInfo(this.selectedClass));
+                if (mode) { global.history[mode + "State"]({ codeClass: this.selectedClass }, "", navigation.listUrl(this.selectedClass)); }
+            },
+            writeDetailRoute: function (item, mode) {
+                const navigation = global.CodeAdminNavigation;
+                global.document.title = navigation.detailTitle(this.getClassInfo(this.selectedClass), item.codeValue);
+                if (mode) { global.history[mode + "State"]({ codeClass: this.selectedClass, codeValue: item.codeValue, id: item.codeValueId }, "", navigation.detailUrl(this.selectedClass, item.codeValue, item.codeValueId)); }
+            },
+            toggleSelected: function (id, checked) { if (checked) { this.selectedIds[id] = true; } else { delete this.selectedIds[id]; } },
+            loadValues: async function () {
+                const requestSequence = ++loadSequence;
+                if (!this.hasSelectedClass) { this.page = viewModel.emptyPage(); this.loading = false; return; }
+                this.loading = true;
                 try {
-                    await window.PilotApiClient.post("api/values.ashx?action=position", {
-                        codeClass: rankControl.getAttribute("data-class"),
-                        codeValue: rankControl.getAttribute("data-value"),
-                        newPosition: newPosition
-                    });
-                    await loadValues();
-                } catch (error) {
-                    handleError(error);
-                } finally {
-                    rankUpdateInFlight = false;
-                    stateApi.set({ rankUpdating: false });
-                }
-            }
-        });
-
-        root.addEventListener("input", function (event) {
-            if (event.target.matches("#codeValueEditor [data-code-value]")) {
-                invalidateEditorRequests();
-                if (metadataRefreshTimer) {
-                    window.clearTimeout(metadataRefreshTimer);
-                }
-                metadataRefreshTimer = window.setTimeout(function () {
-                    refreshCreateMetadata(event.target.form).catch(handleError);
-                }, 300);
-                return;
-            }
-            if (event.target.id !== "searchInput") {
-                return;
-            }
-            const search = event.target.value.trim();
-            if (searchTimer) {
-                window.clearTimeout(searchTimer);
-            }
-            searchTimer = window.setTimeout(function () {
-                invalidateEditorRequests();
-                stateApi.set({
-                    search: search,
-                    start: 0,
-                    selectedIds: {},
-                    editor: null
+                    const page = await global.PilotApiClient.get("api/values.ashx?codeClass=" + encodeURIComponent(this.selectedClass) + "&search=" + encodeURIComponent(this.search || "") + "&start=" + encodeURIComponent(this.start));
+                    if (requestSequence === loadSequence) { this.page = page; this.loading = false; this.message = ""; }
+                } catch (error) { if (requestSequence === loadSequence) { this.loading = false; throw error; } }
+            },
+            loadWorkspace: async function () {
+                this.workspace = await global.PilotApiClient.get("api/workspace.ashx");
+                const route = global.CodeAdminNavigation.parseRoute(global.location.search);
+                const defaultClass = this.workspace.defaultCodeClass || "";
+                this.selectedClass = this.getClassInfo(route.codeClass) ? route.codeClass : defaultClass;
+                this.start = 0; this.clearSelected(); this.editor = null;
+                await this.loadValues();
+                if (route.id) { await this.openDetailEditor(route.id, route, "replace"); } else { this.writeListRoute("replace"); }
+            },
+            loadDetailMetadata: function (codeClass, codeValue) {
+                return global.PilotApiClient.get("api/values.ashx?metadata=true&codeClass=" + encodeURIComponent(codeClass) + "&codeValue=" + encodeURIComponent(codeValue || ""));
+            },
+            prepareEditor: function (editor) {
+                const fields = viewModel.getDetailFields({ fieldMetadata: { [this.selectedClass]: editor.fieldMetadata } }, this.selectedClass);
+                fields.forEach(function (field) {
+                    if (field.controlType === "multiselect" && !Array.isArray(editor[field.key])) {
+                        editor[field.key] = String(editor[field.key] || "").split(",").map(function (value) { return value.trim(); }).filter(Boolean);
+                    }
                 });
-                loadValues().catch(handleError);
-            }, 300);
-        });
-
-        root.addEventListener("keydown", function (event) {
-            if (event.target.id !== "searchInput" || event.key !== "Enter") {
-                return;
-            }
-            event.preventDefault();
-            if (searchTimer) {
-                window.clearTimeout(searchTimer);
-                searchTimer = null;
-            }
-            invalidateEditorRequests();
-            stateApi.set({
-                search: event.target.value.trim(),
-                start: 0,
-                selectedIds: {},
-                editor: null
-            });
-            loadValues().catch(handleError);
-        });
-
-        root.addEventListener("blur", function (event) {
-            if (event.target.matches("#codeValueEditor [data-code-value]")) {
-                if (metadataRefreshTimer) {
-                    window.clearTimeout(metadataRefreshTimer);
-                    metadataRefreshTimer = null;
+                return editor;
+            },
+            selectClass: async function (newCodeClass, originalCodeClass) {
+                if (newCodeClass === this.selectedClass) { return; }
+                const classChange = ++classChangeSequence;
+                const priorState = { selectedClass: originalCodeClass == null ? this.selectedClass : originalCodeClass, start: this.start, selectedIds: this.selectedIds, editor: this.editor, page: this.page, message: this.message };
+                this.invalidateEditorRequests(); this.selectedClass = newCodeClass; this.start = 0; this.clearSelected(); this.editor = null;
+                if (!newCodeClass) { this.page = viewModel.emptyPage(); this.message = ""; return; }
+                try {
+                    await this.loadValues();
+                    if (classChange === classChangeSequence) { this.writeListRoute(applyingPopstate ? null : "push"); }
+                } catch (error) {
+                    if (classChange === classChangeSequence) {
+                        this.selectedClass = priorState.selectedClass; this.start = priorState.start; this.selectedIds = priorState.selectedIds; this.editor = priorState.editor; this.page = priorState.page; this.message = priorState.message;
+                    }
+                    throw error;
                 }
-                refreshCreateMetadata(event.target.form).catch(handleError);
+            },
+            onSearchInput: function (search) {
+                const component = this;
+                this.search = search;
+                global.clearTimeout(searchTimer);
+                searchTimer = global.setTimeout(function () {
+                    component.invalidateEditorRequests(); component.start = 0; component.clearSelected(); component.editor = null;
+                    component.loadValues().catch(component.handleError);
+                }, 300);
+            },
+            changePage: async function (direction) {
+                this.invalidateEditorRequests(); this.start = Math.max(0, this.start + direction * pageSize); this.clearSelected(); this.editor = null;
+                await this.loadValues();
+            },
+            openCreateEditor: async function () {
+                if (!viewModel.canOpenAddEditor(this.selectedClass)) { this.message = "Select a class before adding a code value."; return; }
+                const requestSequence = this.invalidateEditorRequests(); const selectedClass = this.selectedClass;
+                try {
+                    const metadata = await this.loadDetailMetadata(selectedClass, "");
+                    if (requestSequence === editorRequestSequence && selectedClass === this.selectedClass) {
+                        this.editor = this.prepareEditor({ mode: "create", codeValue: "", codeValueError: "", codeValueDesc: "", codeValueLongDesc: "", fieldMetadata: metadata });
+                    }
+                } catch (error) { if (requestSequence === editorRequestSequence) { throw error; } }
+            },
+            openDetailEditor: async function (codeValueId, route, historyMode) {
+                const requestSequence = this.invalidateEditorRequests(); const selectedClass = this.selectedClass;
+                try {
+                    const item = await global.PilotApiClient.get("api/values.ashx?id=" + encodeURIComponent(codeValueId));
+                    if (requestSequence !== editorRequestSequence || selectedClass !== this.selectedClass) { return; }
+                    if (item.codeClass !== selectedClass || (route && route.codeValue && item.codeValue !== route.codeValue)) {
+                        this.editor = null; this.writeListRoute(historyMode === "replace" ? "replace" : null); return;
+                    }
+                    this.editor = this.prepareEditor(Object.assign({ mode: "edit", originalOrderBy: item.orderBy }, item));
+                    this.writeDetailRoute(item, applyingPopstate ? null : historyMode);
+                } catch (error) { if (requestSequence === editorRequestSequence) { throw error; } }
+            },
+            openEditEditor: function (codeValueId) { return this.openDetailEditor(codeValueId, null, "push"); },
+            cancelEditor: function () { this.invalidateEditorRequests(); this.editor = null; this.writeListRoute("replace"); },
+            applyRoute: async function (route) {
+                const application = ++routeSequence;
+                const nextClass = this.getClassInfo(route.codeClass) ? route.codeClass : (this.workspace.defaultCodeClass || "");
+                applyingPopstate = true;
+                try {
+                    if (nextClass !== this.selectedClass) { await this.selectClass(nextClass, this.selectedClass); }
+                    if (application !== routeSequence) { return; }
+                    if (route.id) { await this.openDetailEditor(route.id, route, null); } else { this.invalidateEditorRequests(); this.editor = null; this.writeListRoute(null); }
+                } finally { applyingPopstate = false; }
+            },
+            refreshCreateMetadata: async function () {
+                if (!this.editor || this.editor.mode !== "create" || this.selectedClass !== "ORG_SUB_TY_CD") { return; }
+                const requestSequence = this.invalidateEditorRequests(); const selectedClass = this.selectedClass; const editor = this.editor; const codeValue = editor.codeValue.trim();
+                try {
+                    const metadata = await this.loadDetailMetadata(selectedClass, codeValue);
+                    if (requestSequence === editorRequestSequence && this.editor === editor && this.editor.mode === "create" && this.editor.codeValue.trim() === codeValue && this.selectedClass === selectedClass) {
+                        this.editor = this.prepareEditor(Object.assign({}, editor, { fieldMetadata: metadata }));
+                    }
+                } catch (error) { if (requestSequence === editorRequestSequence) { throw error; } }
+            },
+            onCodeValueInput: function () {
+                const component = this;
+                if (this.editor && this.editor.mode === "create") { this.editor.codeValueError = ""; this.message = ""; }
+                this.invalidateEditorRequests(); global.clearTimeout(metadataTimer);
+                metadataTimer = global.setTimeout(function () { component.refreshCreateMetadata().catch(component.handleError); }, 300);
+            },
+            saveEditor: async function () {
+                if (!this.hasSelectedClass || !this.editor) { this.message = "Select a class before adding a code value."; return; }
+                const editor = this.editor; const requestSequence = this.invalidateEditorRequests();
+                const requestedRank = Number(editor.orderBy);
+                const rankChanged = editor.mode === "edit" && requestedRank !== Number(editor.originalOrderBy);
+                if (rankChanged && (!Number.isInteger(requestedRank) || requestedRank < 1)) { throw new Error("Rank must be a positive whole number."); }
+                const payload = { codeClass: this.selectedClass, codeValue: editor.mode === "edit" ? editor.codeValue : editor.codeValue.trim(), codeValueDesc: "", codeValueLongDesc: "" };
+                viewModel.getPayloadFieldKeys(this.workspace, this.selectedClass).forEach(function (key) { payload[key] = Array.isArray(editor[key]) ? editor[key].join(", ") : String(editor[key] || "").trim(); });
+                try {
+                    if (editor.mode === "edit") {
+                        payload.codeValueId = editor.codeValueId;
+                        await global.PilotApiClient.post("api/values.ashx?action=update", payload);
+                        if (rankChanged) { await global.PilotApiClient.post("api/values.ashx?action=position", { codeClass: editor.codeClass, codeValue: editor.codeValue, newPosition: requestedRank }); }
+                    } else { await global.PilotApiClient.post("api/values.ashx?action=create", payload); }
+                    if (requestSequence === editorRequestSequence) { this.editor = null; await this.loadValues(); this.writeListRoute("replace"); }
+                } catch (error) {
+                    if (requestSequence === editorRequestSequence) {
+                        if (editor.mode === "create") { editor.codeValueError = (error && error.message) || "The value could not be created."; }
+                        throw error;
+                    }
+                }
+            },
+            saveListText: async function (item, fieldName, newValue) {
+                if (fieldName !== "codeValueDesc" && fieldName !== "codeValueLongDesc") { throw new Error("Unsupported list text field."); }
+                const classAtStart = this.selectedClass;
+                const textValue = String(newValue == null ? "" : newValue).trim();
+                const record = await global.PilotApiClient.get("api/values.ashx?id=" + encodeURIComponent(item.codeValueId));
+                if (classAtStart !== this.selectedClass || record.codeClass !== classAtStart || record.codeValue !== item.codeValue) { throw new Error("The code value changed before its text could be saved."); }
+                const payload = { codeValueId: record.codeValueId, codeClass: record.codeClass, codeValue: record.codeValue, codeValueDesc: record.codeValueDesc || "", codeValueLongDesc: record.codeValueLongDesc || "" };
+                payload[fieldName] = textValue;
+                viewModel.getPayloadFieldKeys(this.workspace, classAtStart).forEach(function (key) { if (key !== "codeValueDesc" && key !== "codeValueLongDesc") { payload[key] = Array.isArray(record[key]) ? record[key].join(", ") : String(record[key] || "").trim(); } });
+                await global.PilotApiClient.post("api/values.ashx?action=update", payload);
+                if (classAtStart === this.selectedClass) { await this.loadValues(); }
+            },
+            saveDescription: function (item, newDescription) { return this.saveListText(item, "codeValueDesc", newDescription); },
+            saveLongDescription: function (item, newDescription) { return this.saveListText(item, "codeValueLongDesc", newDescription); },
+            deleteSelected: async function () {
+                const ids = Object.keys(this.selectedIds).map(Number);
+                if (!ids.length) { this.message = "Select at least one code value to delete."; return; }
+                const confirmed = await global.PilotDialogs.confirm({ title: "Delete code values", message: "Delete " + ids.length + " selected code value" + (ids.length === 1 ? "" : "s") + "? Values currently in use will be skipped.", confirmLabel: "Delete", cancelLabel: "Cancel", danger: true });
+                if (!confirmed) { return; }
+                const result = await global.PilotApiClient.post("api/values.ashx?action=delete", { codeValueIds: ids });
+                this.clearSelected(); await this.loadValues();
+                const skipped = (result.results || []).filter(function (item) { return item.skippedInUse; });
+                if (skipped.length) { this.message = skipped.map(function (item) { return item.message; }).join(" "); }
+            },
+            setStatus: async function (item, status) {
+                const currentStatus = item.status === "N" || item.status === "Y" || item.status === "A" ? item.status : (item.inactive ? "Y" : "N");
+                if (item.isProtected || status === currentStatus || this.statusUpdatingId !== null) { return; }
+                this.statusUpdatingId = item.codeValueId;
+                try {
+                    await global.PilotApiClient.post("api/values.ashx?action=status", { codeClass: item.codeClass, codeValue: item.codeValue, status: status });
+                    await this.loadValues();
+                } catch (error) {
+                    try { await this.loadValues(); } catch (reloadError) {}
+                    throw error;
+                } finally { this.statusUpdatingId = null; }
+            },
+            saveRank: async function (item, value) {
+                const newPosition = Number(value);
+                if (!Number.isInteger(newPosition) || newPosition < 1) { throw new Error("Rank must be a positive whole number."); }
+                if (this.rankUpdating) { return; }
+                this.rankUpdating = true;
+                try {
+                    await global.PilotApiClient.post("api/values.ashx?action=position", { codeClass: item.codeClass, codeValue: item.codeValue, newPosition: newPosition });
+                    await this.loadValues();
+                } finally { this.rankUpdating = false; }
             }
-        }, true);
+        },
+        template: `
+            <div>
+                <div v-if="message" class="alert alert-danger code-admin-message" role="alert">{{ message }}</div>
+                <Editor v-if="editor" :editor="editor" :selected-class="selectedClass" :workspace="workspace" @cancel="cancelEditor" @save="function () { saveEditor().catch(handleError); }" @code-value-input="onCodeValueInput" @refresh-metadata="function () { refreshCreateMetadata().catch(handleError); }"></Editor>
+                <Workspace v-else :workspace="workspace" :page="page" :selected-class="selectedClass" :search="search" :selected-ids="selectedIds" :loading="loading" :rank-updating="rankUpdating" :status-updating-id="statusUpdatingId" :on-class-change="selectClass" :on-save-rank="saveRank" :on-set-status="setStatus" @search-change="onSearchInput" @selection-change="toggleSelected" @add="function () { openCreateEditor().catch(handleError); }" @edit="function (id) { openEditEditor(id).catch(handleError); }" @description-save="function (item, value) { return saveDescription(item, value); }" @long-description-save="function (item, value) { return saveLongDescription(item, value); }" @delete="function () { deleteSelected().catch(handleError); }" @page-change="function (direction) { changePage(direction).catch(handleError); }" @error="handleError"></Workspace>
+            </div>`
+    });
 
-        root.addEventListener("submit", function (event) {
-            if (event.target.id !== "codeValueEditor") {
-                return;
-            }
-            event.preventDefault();
-            saveEditor(event.target).catch(handleError);
-        });
+    app.component("InlineEdit", global.InlineEdit);
+    const component = app.mount("#codeAdminApp");
 
-    }
+    global.addEventListener("popstate", function () {
+        component.applyRoute(global.CodeAdminNavigation.parseRoute(global.location.search)).catch(component.handleError);
+    });
 
     async function bootstrap() {
-        window.PilotSession.configure({ sessionUrl: "api/session.ashx" });
-        window.PilotApiClient.setApiBase("");
-        window.PilotShell.bindLogout(document.getElementById("logoutButton"));
-        bindEvents();
-        stateApi.subscribe(render);
-
+        global.PilotSession.configure({ sessionUrl: "api/session.ashx" });
+        global.PilotApiClient.setApiBase("");
+        global.PilotShell.bindLogout(document.getElementById("logoutButton"));
         try {
-            const session = await window.PilotSession.load();
-            userNameEl.textContent = session.userName;
-            userEl.hidden = false;
-            window.PilotShell.renderSectionMenu(
-                document.getElementById("adminMenu"),
-                session.menuSections || [],
-                window.location.pathname
-            );
-            stateApi.set({ session: session });
-            await loadWorkspace();
-        } catch (error) {
-            handleError(error);
-        }
+            const session = await global.PilotSession.load();
+            document.getElementById("shellUserName").textContent = session.userName;
+            document.getElementById("shellUser").hidden = false;
+            global.PilotShell.renderSectionMenu(document.getElementById("adminMenu"), session.menuSections || [], global.location.pathname);
+            await component.loadWorkspace();
+        } catch (error) { component.handleError(error); }
     }
 
     bootstrap();
-}());
+}(window));

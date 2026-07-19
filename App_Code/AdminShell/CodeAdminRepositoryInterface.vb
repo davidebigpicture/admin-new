@@ -19,8 +19,7 @@ Public Interface ICodeAdminRepository
     Function UpdateLicenseObjTypeValue(command As UpdateCodeValueCommand, majorCode As String) As CodeAdminValue
     Function PatchValue(command As PatchCodeValueCommand) As CodeAdminValue
     Function DeleteValue(codeValueId As Integer) As CodeAdminDeleteResult
-        Function DeleteLicenseObjTypeValue(codeValueId As Integer, majorCode As String) As CodeAdminDeleteResult
-    Sub ActivateValue(codeClass As String, codeValue As String, majorCode As String)
-    Sub DeactivateValue(codeClass As String, codeValue As String, majorCode As String)
+    Function DeleteLicenseObjTypeValue(codeValueId As Integer, majorCode As String) As CodeAdminDeleteResult
+    Sub SetStatus(codeClass As String, codeValue As String, status As String)
     Sub SetPosition(codeClass As String, codeValue As String, newPosition As Integer)
 End Interface

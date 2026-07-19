@@ -63,8 +63,16 @@ Module CodeAdminServiceTests
         TestProtectedValueCannotBeUpdated()
         TestProtectedValueCannotBePositioned()
         TestProtectedValueCannotChangeLifecycle()
+        TestStatusAcceptsAllLifecycleValues()
+        TestStatusRejectsInvalidLifecycleValue()
+        TestLegacyApplicationDbValueCanChangeStatus()
+        TestLegacyApplicationDbValueCanBePositioned()
+        TestLegacyApplicationDbValueCanBeUpdated()
+        TestCreateRetainsStrictCodeValuePolicy()
+        TestExistingCodeValueReferenceRequiresNonblankBoundedValue()
         TestPositionRequiresExistingValue()
         TestInactiveValueCannotBePositioned()
+        TestArchivedValueCannotBePositioned()
         TestInactiveValueCannotBePositionedThroughPatch()
         TestOptionalValueLengthIsValidated()
         TestOptionalValuesArePassedToCreateRepositoryCommand()
@@ -377,6 +385,104 @@ Module CodeAdminServiceTests
             "protected values cannot be deactivated")
     End Sub
 
+    Private Sub TestStatusAcceptsAllLifecycleValues()
+        Dim repository As New FakeCodeAdminRepository()
+        repository.MajorCode = String.Empty
+        repository.Classes.Add(New CodeAdminClass With {.CodeClass = "WINDOW_SHADE_CD", .CodeClassDesc = "Window Shades", .Edit = True})
+        repository.Values.Add(New CodeAdminValue With {.CodeValueId = 8, .CodeClass = "WINDOW_SHADE_CD", .CodeValue = "OPEN", .CodeValueDesc = "Open"})
+        Dim service = CreateService(repository)
+
+        service.SetStatus(New CodeValueLifecycleCommand With {.CodeClass = "WINDOW_SHADE_CD", .CodeValue = "OPEN", .Status = CodeAdminConstants.StatusActive})
+        service.SetStatus(New CodeValueLifecycleCommand With {.CodeClass = "WINDOW_SHADE_CD", .CodeValue = "OPEN", .Status = CodeAdminConstants.StatusInactive})
+        service.SetStatus(New CodeValueLifecycleCommand With {.CodeClass = "WINDOW_SHADE_CD", .CodeValue = "OPEN", .Status = CodeAdminConstants.StatusArchived})
+
+        If String.Join(",", repository.Statuses) = "N,Y,A" Then
+            Pass("status accepts and routes Active, Inactive, and Archived values")
+        Else
+            Fail("status accepts and routes Active, Inactive, and Archived values")
+        End If
+    End Sub
+
+    Private Sub TestStatusRejectsInvalidLifecycleValue()
+        Dim repository As New FakeCodeAdminRepository()
+        repository.Classes.Add(New CodeAdminClass With {.CodeClass = "WINDOW_SHADE_CD", .CodeClassDesc = "Window Shades", .Edit = True})
+        repository.Values.Add(New CodeAdminValue With {.CodeValueId = 9, .CodeClass = "WINDOW_SHADE_CD", .CodeValue = "OPEN", .CodeValueDesc = "Open"})
+
+        AssertThrows(Of AccessManagerValidationException)(
+            Sub() CreateService(repository).SetStatus(New CodeValueLifecycleCommand With {.CodeClass = "WINDOW_SHADE_CD", .CodeValue = "OPEN", .Status = "X"}),
+            "status rejects values outside Active, Inactive, and Archived")
+    End Sub
+
+    Private Sub TestLegacyApplicationDbValueCanChangeStatus()
+        Dim repository = CreateLegacyApplicationDbRepository()
+
+        CreateService(repository).SetStatus(New CodeValueLifecycleCommand With {
+            .CodeClass = "APPLICATION_DB",
+            .CodeValue = "/db/customforms.js",
+            .Status = CodeAdminConstants.StatusActive
+        })
+
+        If String.Join(",", repository.Statuses) = CodeAdminConstants.StatusActive Then
+            Pass("legacy APPLICATION_DB value can be activated")
+        Else
+            Fail("legacy APPLICATION_DB value can be activated")
+        End If
+    End Sub
+
+    Private Sub TestLegacyApplicationDbValueCanBePositioned()
+        Dim repository = CreateLegacyApplicationDbRepository()
+
+        CreateService(repository).SetPosition(New CodeValuePositionCommand With {
+            .CodeClass = "APPLICATION_DB",
+            .CodeValue = "/db/customforms.js",
+            .NewPosition = 3
+        })
+
+        If repository.LastPositionedCodeValue = "/db/customforms.js" AndAlso repository.LastPositionedValue = 3 Then
+            Pass("legacy APPLICATION_DB value can be positioned")
+        Else
+            Fail("legacy APPLICATION_DB value can be positioned")
+        End If
+    End Sub
+
+    Private Sub TestLegacyApplicationDbValueCanBeUpdated()
+        Dim repository = CreateLegacyApplicationDbRepository()
+
+        CreateService(repository).UpdateValue(New UpdateCodeValueCommand With {
+            .CodeValueId = 15,
+            .CodeClass = "APPLICATION_DB",
+            .CodeValue = "/db/customforms.js",
+            .CodeValueDesc = "Custom forms"
+        })
+
+        If repository.LastUpdated IsNot Nothing AndAlso repository.LastUpdated.CodeValue = "/db/customforms.js" Then
+            Pass("legacy APPLICATION_DB value can be updated")
+        Else
+            Fail("legacy APPLICATION_DB value can be updated")
+        End If
+    End Sub
+
+    Private Sub TestCreateRetainsStrictCodeValuePolicy()
+        Dim repository = CreateLegacyApplicationDbRepository()
+
+        AssertThrows(Of AccessManagerValidationException)(
+            Sub() CreateService(repository).CreateValue(New CreateCodeValueCommand With {
+                .CodeClass = "APPLICATION_DB",
+                .CodeValue = "/db/customforms.js",
+                .CodeValueDesc = "Custom forms"
+            }),
+            "create retains strict code value naming policy")
+    End Sub
+
+    Private Sub TestExistingCodeValueReferenceRequiresNonblankBoundedValue()
+        AssertThrows(Of AccessManagerValidationException)(
+            Sub() CodeAdminValidation.ValidateExistingCodeValueReference(" "),
+            "existing code value references require a value")
+        AssertThrows(Of AccessManagerValidationException)(
+            Sub() CodeAdminValidation.ValidateExistingCodeValueReference(New String("x"c, CodeAdminConstants.MaxCodeValueLength + 1)),
+            "existing code value references enforce the maximum length")
+    End Sub
+
     Private Sub TestPositionRequiresExistingValue()
         Dim repository As New FakeCodeAdminRepository()
         repository.Classes.Add(New CodeAdminClass With {
@@ -418,6 +524,16 @@ Module CodeAdminServiceTests
                 .NewPosition = 1
             }),
             "inactive values cannot be positioned")
+    End Sub
+
+    Private Sub TestArchivedValueCannotBePositioned()
+        Dim repository As New FakeCodeAdminRepository()
+        repository.Classes.Add(New CodeAdminClass With {.CodeClass = "WINDOW_SHADE_CD", .CodeClassDesc = "Window Shades", .Edit = True})
+        repository.Values.Add(New CodeAdminValue With {.CodeValueId = 4, .CodeClass = "WINDOW_SHADE_CD", .CodeValue = "ARCHIVED", .CodeValueDesc = "Archived", .Status = CodeAdminConstants.StatusArchived, .Inactive = True})
+
+        AssertThrows(Of AccessManagerValidationException)(
+            Sub() CreateService(repository).SetPosition(New CodeValuePositionCommand With {.CodeClass = "WINDOW_SHADE_CD", .CodeValue = "ARCHIVED", .NewPosition = 1}),
+            "archived values cannot be positioned")
     End Sub
 
     Private Sub TestInactiveValueCannotBePositionedThroughPatch()
@@ -506,6 +622,22 @@ Module CodeAdminServiceTests
         Return repository
     End Function
 
+    Private Function CreateLegacyApplicationDbRepository() As FakeCodeAdminRepository
+        Dim repository As New FakeCodeAdminRepository()
+        repository.Classes.Add(New CodeAdminClass With {
+            .CodeClass = "APPLICATION_DB",
+            .CodeClassDesc = "Application DB",
+            .Edit = True
+        })
+        repository.Values.Add(New CodeAdminValue With {
+            .CodeValueId = 15,
+            .CodeClass = "APPLICATION_DB",
+            .CodeValue = "/db/customforms.js",
+            .CodeValueDesc = "Custom forms"
+        })
+        Return repository
+    End Function
+
     Private Sub TestDeleteRequiresSelection()
         Dim service = CreateService(New FakeCodeAdminRepository())
         AssertThrows(Of AccessManagerValidationException)(
@@ -560,6 +692,10 @@ Friend Class FakeCodeAdminRepository
     Public CreatedLicenseObjType As Boolean
     Public GenericDeleteCount As Integer
     Public LicenseObjTypeDeleteCount As Integer
+    Public Statuses As New List(Of String)()
+    Public LastUpdated As UpdateCodeValueCommand
+    Public LastPositionedCodeValue As String
+    Public LastPositionedValue As Integer
     Public MajorCode As String = "3900"
 
     Public Function ResolveMajorCode() As String Implements ICodeAdminRepository.ResolveMajorCode
@@ -655,7 +791,8 @@ Friend Class FakeCodeAdminRepository
     End Function
 
     Public Function UpdateValue(command As UpdateCodeValueCommand) As CodeAdminValue Implements ICodeAdminRepository.UpdateValue
-        Throw New NotImplementedException()
+        LastUpdated = command
+        Return GetValueById(command.CodeValueId)
     End Function
 
     Public Function UpdateLicenseObjTypeValue(command As UpdateCodeValueCommand, majorCode As String) As CodeAdminValue Implements ICodeAdminRepository.UpdateLicenseObjTypeValue
@@ -676,15 +813,12 @@ Friend Class FakeCodeAdminRepository
         Return New CodeAdminDeleteResult With {.Deleted = True}
     End Function
 
-    Public Sub ActivateValue(codeClass As String, codeValue As String, majorCode As String) Implements ICodeAdminRepository.ActivateValue
-        Throw New NotImplementedException()
-    End Sub
-
-    Public Sub DeactivateValue(codeClass As String, codeValue As String, majorCode As String) Implements ICodeAdminRepository.DeactivateValue
-        Throw New NotImplementedException()
+    Public Sub SetStatus(codeClass As String, codeValue As String, status As String) Implements ICodeAdminRepository.SetStatus
+        Statuses.Add(status)
     End Sub
 
     Public Sub SetPosition(codeClass As String, codeValue As String, newPosition As Integer) Implements ICodeAdminRepository.SetPosition
-        Throw New NotImplementedException()
+        LastPositionedCodeValue = codeValue
+        LastPositionedValue = newPosition
     End Sub
 End Class

@@ -8,8 +8,9 @@
     <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.4.1/css/bootstrap.min.css">
     <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/font-awesome/4.7.0/css/font-awesome.min.css">
     <link rel="stylesheet" href="<%= System.Web.HttpUtility.HtmlAttributeEncode(PilotConfig.StylesheetUrl) %>">
-    <link rel="stylesheet" href="../shared/shell.css?v=071827b">
-    <link rel="stylesheet" href="code-admin.css?v=071827a">
+        <link rel="stylesheet" href="../shared/shell.css?v=0719n">
+    <link rel="stylesheet" href="../shared/inline-edit.css?v=0719af">
+                <link rel="stylesheet" href="code-admin.css?v=0719ab">
 </head>
 <body>
     <header class="shell-header">
@@ -29,7 +30,6 @@
     <div class="admin-layout" id="adminLayout">
         <aside class="admin-menu" id="adminMenu" aria-label="Primary navigation"></aside>
         <main class="shell-main" id="appMain">
-            <div id="appMessage" class="alert alert-danger code-admin-message" role="alert" hidden></div>
             <div id="codeAdminApp"></div>
         </main>
     </div>
@@ -44,8 +44,12 @@
     <script src="../shared/session.js"></script>
     <script src="../shared/dialogs.js"></script>
     <script src="../shared/shell.js?v=071827b"></script>
-    <script src="js/state.js?v=071826b"></script>
+    <script src="../shared/vendor/vue.global.prod.js?v=3.5.13"></script>
+    <script src="../shared/inline-edit.js?v=0719ad"></script>
     <script src="js/view-model.js?v=071826f"></script>
-    <script src="js/app.js?v=071828b"></script>
+    <script src="js/navigation.js?v=0719a"></script>
+    <script src="js/components/editor.js?v=0719n"></script>
+        <script src="js/components/workspace.js?v=0719ac"></script>
+    <script src="js/app.js?v=0719ac"></script>
 </body>
 </html>

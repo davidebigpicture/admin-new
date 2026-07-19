@@ -30,6 +30,10 @@ Public NotInheritable Class CodeAdminValidation
         End If
     End Sub
 
+    Public Shared Sub ValidateExistingCodeValueReference(codeValue As String)
+        NormalizeRequiredToken(codeValue, "Code value", CodeAdminConstants.MaxCodeValueLength)
+    End Sub
+
     Public Shared Sub ValidateDescription(description As String)
         NormalizeRequiredToken(description, "Description", CodeAdminConstants.MaxDescriptionLength)
     End Sub
