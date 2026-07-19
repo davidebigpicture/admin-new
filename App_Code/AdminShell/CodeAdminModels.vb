@@ -18,14 +18,17 @@ Public NotInheritable Class CodeAdminConstants
     Public Const MaxCodeValueLength As Integer = 50
     Public Const MaxDescriptionLength As Integer = 1000
     Public Const MaxLongDescriptionLength As Integer = 4000
+    Public Const MaxOptionalValueLength As Integer = 1000
 End Class
 
+<Serializable>
 Public Class CodeAdminClass
     Public Property CodeClass As String
     Public Property CodeClassDesc As String
     Public Property Edit As Boolean
 End Class
 
+<Serializable>
 Public Class CodeAdminValue
     Public Property CodeValueId As Integer
     Public Property CodeClass As String
@@ -37,9 +40,28 @@ Public Class CodeAdminValue
     Public Property MinorCode As String
     Public Property OrderBy As Integer?
     Public Property FormDisplay As String
+    Public Property OptionValue1 As String
+    Public Property OptionValue2 As String
+    Public Property OptionValue3 As String
+    Public Property OptionValue4 As String
+    Public Property OptionValue5 As String
+    Public Property OptionValue6 As String
+    Public Property OptionValue7 As String
+    Public Property OptionValue8 As String
+    Public Property OptionValue9 As String
+    Public Property OptionValue10 As String
+    Public Property OptionValue11 As String
+    Public Property OptionValue12 As String
+    Public Property OptionValue13 As String
+    Public Property OptionValue14 As String
+    Public Property OptionValue15 As String
+    Public Property OptionValue16 As String
+    Public Property OptionValue17 As String
     Public Property IsProtected As Boolean
+    Public Property FieldMetadata As CodeAdminDetailMetadata
 End Class
 
+<Serializable>
 Public Class CodeAdminValuePage
     Public Property Items As IList(Of CodeAdminValue)
     Public Property TotalCount As Integer
@@ -48,11 +70,36 @@ Public Class CodeAdminValuePage
     Public Property CanDelete As Boolean
 End Class
 
+<Serializable>
 Public Class CodeAdminWorkspace
     Public Property Classes As IList(Of CodeAdminClass)
     Public Property DefaultCodeClass As String
     Public Property MajorCode As String
     Public Property ShowClassCodes As Boolean
+    Public Property FieldMetadata As IDictionary(Of String, CodeAdminDetailMetadata)
+End Class
+
+<Serializable>
+Public Class CodeAdminFieldOption
+    Public Property Value As String
+    Public Property Label As String
+End Class
+
+<Serializable>
+Public Class CodeAdminFieldMetadata
+    Public Property Key As String
+    Public Property Label As String
+    Public Property ControlType As String
+    Public Property LookupSource As String
+    Public Property Required As Boolean
+    Public Property Options As IList(Of CodeAdminFieldOption)
+    Public Property Section As String
+    Public Property Order As Integer
+End Class
+
+<Serializable>
+Public Class CodeAdminDetailMetadata
+    Public Property Fields As IList(Of CodeAdminFieldMetadata)
 End Class
 
 Public Class CodeAdminDeleteResult
@@ -67,6 +114,24 @@ Public Class CreateCodeValueCommand
     Public Property CodeValueDesc As String
     Public Property CodeValueLongDesc As String
     Public Property MinorCode As String
+    Public Property FormDisplay As String
+    Public Property OptionValue1 As String
+    Public Property OptionValue2 As String
+    Public Property OptionValue3 As String
+    Public Property OptionValue4 As String
+    Public Property OptionValue5 As String
+    Public Property OptionValue6 As String
+    Public Property OptionValue7 As String
+    Public Property OptionValue8 As String
+    Public Property OptionValue9 As String
+    Public Property OptionValue10 As String
+    Public Property OptionValue11 As String
+    Public Property OptionValue12 As String
+    Public Property OptionValue13 As String
+    Public Property OptionValue14 As String
+    Public Property OptionValue15 As String
+    Public Property OptionValue16 As String
+    Public Property OptionValue17 As String
 End Class
 
 Public Class UpdateCodeValueCommand
@@ -76,6 +141,24 @@ Public Class UpdateCodeValueCommand
     Public Property CodeValueDesc As String
     Public Property CodeValueLongDesc As String
     Public Property MinorCode As String
+    Public Property FormDisplay As String
+    Public Property OptionValue1 As String
+    Public Property OptionValue2 As String
+    Public Property OptionValue3 As String
+    Public Property OptionValue4 As String
+    Public Property OptionValue5 As String
+    Public Property OptionValue6 As String
+    Public Property OptionValue7 As String
+    Public Property OptionValue8 As String
+    Public Property OptionValue9 As String
+    Public Property OptionValue10 As String
+    Public Property OptionValue11 As String
+    Public Property OptionValue12 As String
+    Public Property OptionValue13 As String
+    Public Property OptionValue14 As String
+    Public Property OptionValue15 As String
+    Public Property OptionValue16 As String
+    Public Property OptionValue17 As String
 End Class
 
 Public Class CodeValueLifecycleCommand

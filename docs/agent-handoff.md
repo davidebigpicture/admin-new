@@ -36,10 +36,12 @@ This file is the operational handoff for the next agent. Read
 
 ## Code Admin (.NET rewrite)
 
-**Status (July 18, 2026):** MVP deployed on WVBPS dev. Logged-in browser
-verification passed: class dropdown (Oracle), value grid, Add enabled when a
-class is selected, `workspace.ashx` and `values.ashx` return 200. Not a full
-CRUD/regression pass against every Perl edge case.
+**Status (July 18, 2026):** Code Admin's managed list and detail workflows are
+implemented. The heading combines the selected class's friendly description,
+secondary internal code, and class selector. Listing uses a fixed 200-row page,
+with a 300 ms debounced typeahead filter and no Search button. The count-aware
+bulk delete action is visible, and clicking a code value opens its full,
+metadata-driven detail form.
 
 **Perl source of truth (read-only):** `A:\GLOBAL_6-next\admin\cgi-bin\codeadminO.pl`
 
@@ -64,7 +66,7 @@ redirect to `managed/login.html`.)
 | APIs + page auth | `App_Code/AdminShell/CodeAdmin*.vb` | `A:\wvbps\www\html\App_Code\AdminShell\` |
 | UI | `managed/code-admin/` | `A:\wvbps\www\html\dev\adminshell\managed\code-admin\` |
 
-Backend files: `CodeAdminModels.vb`, `CodeAdminValidation.vb`,
+Backend files: `CodeAdminModels.vb`, `CodeAdminFieldMetadata.vb`, `CodeAdminValidation.vb`,
 `CodeAdminRepositoryInterface.vb`, `CodeAdminRepository.vb`, `CodeAdminService.vb`,
 `CodeAdminAccess.vb`, `CodeAdminApiGuard.vb`, `CodeAdminApiHandlers.vb` (includes
 `CodeAdminPage`).
@@ -120,26 +122,59 @@ Protocol: [`.cursor/rules/browser-e2e.mdc`](../.cursor/rules/browser-e2e.mdc).
 On empty UI or errors, `browser_cdp` + `fetch('api/workspace.ashx')` and report
 HTTP status + JSON body (do not guess from screenshots alone).
 
-**UI styling (known debt — not Bootstrap):**
+**UI styling (Code Admin):**
 
-The pilot shell uses **`managed/shared/shell.css`** (see Access Manager), not
-Bootstrap. Code Admin `app.js` still emits **Bootstrap 3 class names**
-(`btn btn-primary btn-sm`, `btn-default`, etc.) **without loading Bootstrap CSS**,
-so toolbar inputs and buttons look inconsistent.
+Code Admin intentionally uses **Bootstrap 3.4.1 CSS** plus the configured legacy
+`PilotConfig.StylesheetUrl` (`/admin/admin/bpstyles.css` on WVBPS). Its stylesheet
+order is Bootstrap, Font Awesome, `bpstyles.css`, shared `shell.css`, then scoped
+`code-admin.css` overrides. This gives the rebuilt tool the familiar compact
+admin controls while keeping the unified header and left navigation.
 
-**Do not add Bootstrap 5** for Code Admin alone. **Recommended fix:** align markup
-with shell conventions (`button.primary`, `button.danger`, `.field`, `table.data`,
-`.inline-form`) as in `managed/access-manager/js/sections-view.js`. Legacy global
-admin uses `/admin/admin/bpstyles.css` (older stack); the pilot intentionally
-does not import it.
+The page does not load jQuery or Bootstrap JavaScript because it uses no
+Bootstrap plugins; session, shell, CRUD, and dialog behavior remain plain
+JavaScript. Keep Code Admin-specific compatibility rules beneath
+`#codeAdminApp`. Do not add Bootstrap 5 or apply Bootstrap 3 globally to other
+managed pages as part of Code Admin work.
 
-**Not done / follow-up:**
+The workspace heading uses the selected class's friendly description with its
+internal code as secondary text and an inline class selector. The value grid
+uses a fixed 200-row page and separates Select, Rank, Code value, Description,
+Status, and Actions. Filtering is a 300 ms debounced typeahead with no Search
+button. The bulk delete action remains visible and displays the selected-count
+state. Clicking a code value opens the full metadata-driven detail form.
 
-- UI shell.css alignment (above).
-- Full browser E2E: create, edit, patch, activate/deactivate, delete, protected
-  values, `GROUP_TY_CD` / `APPLICATION_DB` delete rules.
-- Org-specific Perl branches (e.g. WVBPS `LicenseObjType` extra columns) — skipped in MVP.
-- Commit/push in `admin-new` if user requests.
+The detail form persists and displays all 17 option fields. Universal and
+organization-specific metadata select the correct labels, controls, validation,
+and lookup sources; lookup metadata is hydrated lazily only when the form needs
+it. Server-side validation applies the option-field rules. For organization
+3900 `LicenseObjType` mutations, the `SDHLS_LIC_TYPE_WS` and
+`SDHLS_LIC_TYPE_GROUP` derived data is rebuilt inside the same transaction.
+
+Position and lifecycle mutations require an existing, non-protected value;
+position also rejects inactive values. Protected rows render their rank and
+description read-only and expose no mutation actions. Nonexistent mutation
+targets are rejected without mutation, and `APPLICATION_DB` / `DEV_DOMAIN`
+expose no Ranker, inline editor, or lifecycle button. The responsive shell has
+a mobile hamburger control; at mobile widths the menu starts collapsed and the
+desktop slate edge control remains hidden.
+
+Authenticated WVBPS browser verification passed for `C_BUSINESS_TYPE`: typing
+`corp` produced one debounced request with `search=corp` and one result; bulk
+delete changed from 0 to 1 after selection; clicking `CORP` replaced the list
+with the full detail workspace; all 17 option fields and Form Display rendered;
+and Back to list restored the `corp` filter and result. Read-only metadata checks
+also passed for `WINDOW_SHADE_CD`, required `APP_RENEW_TYPE_CD` Path/Record Type
+fields, and live `ORG_SUB_TY_CD` column lookups. The mobile hamburger opened and
+closed the menu by keyboard with synchronized ARIA state, no hidden focusable
+links, and no change to the stored desktop collapse preference.
+
+**Still unverified:**
+
+- Live organization-specific branches on WVBPS organization 7400.
+- A real Oracle create/update round trip, including all option fields.
+- An induced transaction rollback for the organization 3900 `LicenseObjType`
+  SDHLS rebuild.
+- Full destructive CRUD against a safe test record.
 
 **Deploy note:** After `App_Code` changes, recycle the WVBPS app pool or touch
 `App_Code\AdminShell` so ASP.NET recompiles. Sync repo → deploy paths above.

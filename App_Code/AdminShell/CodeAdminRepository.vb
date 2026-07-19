@@ -4,6 +4,7 @@ Imports System.Configuration
 Imports System.Data
 Imports System.Data.OleDb
 Imports System.Globalization
+Imports System.Linq
 
 Public Class CodeAdminRepository
     Implements ICodeAdminRepository
@@ -81,7 +82,10 @@ Public Class CodeAdminRepository
     Public Function ListValues(codeClass As String, search As String) As IList(Of CodeAdminValue) Implements ICodeAdminRepository.ListValues
         Dim sql =
             "select code_value_id, code_class, code_value, code_value_desc, code_value_long_desc, " &
-            "inactive, major_code, minor_code, order_by, form_display " &
+            "inactive, major_code, minor_code, order_by, form_display, " &
+            "option_value_1, option_value_2, option_value_3, option_value_4, option_value_5, option_value_6, " &
+            "option_value_7, option_value_8, option_value_9, option_value_10, option_value_11, option_value_12, " &
+            "option_value_13, option_value_14, option_value_15, option_value_16, option_value_17 " &
             "from code_value where code_class = ?"
 
         Dim parameters As New List(Of OleDbParameter)()
@@ -116,10 +120,83 @@ Public Class CodeAdminRepository
         Return results
     End Function
 
+    Public Function ListLookupCodeValues(codeClass As String, selectedValues As IList(Of String), excludeValue As String) As IList(Of CodeAdminFieldOption) Implements ICodeAdminRepository.ListLookupCodeValues
+        Dim sql = "select code_value, code_value_desc from code_value where code_class = ? and (inactive = 'N'"
+        Dim parameters As New List(Of OleDbParameter)()
+        parameters.Add(New OleDbParameter("@code_class", OleDbType.VarChar, 50) With {.Value = codeClass})
+        If selectedValues IsNot Nothing AndAlso selectedValues.Count > 0 Then
+            sql &= " or code_value in (" & String.Join(", ", Enumerable.Repeat("?", selectedValues.Count).ToArray()) & ")"
+            Dim selectedIndex As Integer
+            For selectedIndex = 0 To selectedValues.Count - 1
+                parameters.Add(New OleDbParameter("@selected_value", OleDbType.VarChar, 50) With {.Value = selectedValues(selectedIndex)})
+            Next
+        End If
+        sql &= ")"
+        If Not String.IsNullOrWhiteSpace(excludeValue) Then
+            sql &= " and code_value <> ?"
+            parameters.Add(New OleDbParameter("@excluded_value", OleDbType.VarChar, 50) With {.Value = excludeValue})
+        End If
+        sql &= " order by upper(code_value_desc), upper(code_value)"
+        Return ReadLookupOptions(sql, parameters)
+    End Function
+
+    Public Function ListLookupCodeClasses(selectedValue As String) As IList(Of CodeAdminFieldOption) Implements ICodeAdminRepository.ListLookupCodeClasses
+        Const sql As String = "select code_class, code_class_desc from code_class order by upper(code_class_desc), upper(code_class)"
+        Return ReadLookupOptions(sql, Nothing)
+    End Function
+
+    Public Function ListOrgSubTypeColumns(orgSubTypeCode As String, includeFunctionFields As Boolean) As IList(Of CodeAdminFieldOption) Implements ICodeAdminRepository.ListOrgSubTypeColumns
+        Const sql As String =
+            "select membership_column_detail.column_desc, membership_column_detail.column_rpt_desc, membership_column_detail.data_type, membership_column_detail.form_field_type " &
+            "from membership_column_detail, code_value where membership_column_detail.org_sub_ty_cd = code_value.code_value " &
+            "and code_value.code_class = 'ORG_SUB_TY_CD' and membership_column_detail.inactive = 'N' and membership_column_detail.org_sub_ty_cd = ? " &
+            "union select org_column_detail.column_desc, org_column_detail.column_rpt_desc, org_column_detail.data_type, org_column_detail.form_field_type " &
+            "from org_column_detail, code_value where org_column_detail.org_sub_ty_cd = code_value.code_value " &
+            "and code_value.code_class = 'ORG_SUB_TY_CD' and org_column_detail.inactive = 'N' and org_column_detail.org_sub_ty_cd = ? order by 2, 1"
+        Dim options As New List(Of CodeAdminFieldOption)()
+        Using connection As New OleDbConnection(_connectionString), command As New OleDbCommand(sql, connection)
+            command.Parameters.Add("@org_sub_ty_cd_member", OleDbType.VarChar, 50).Value = orgSubTypeCode
+            command.Parameters.Add("@org_sub_ty_cd_detail", OleDbType.VarChar, 50).Value = orgSubTypeCode
+            connection.Open()
+            Using reader = command.ExecuteReader()
+                While reader.Read()
+                    Dim columnName = DbString(ReaderValue(reader, "column_desc"))
+                    Dim dataType = DbString(ReaderValue(reader, "data_type"))
+                    Dim fieldType = DbString(ReaderValue(reader, "form_field_type"))
+                    If (Not includeFunctionFields AndAlso (String.Equals(dataType, "FUNCTION", StringComparison.OrdinalIgnoreCase) OrElse String.Equals(fieldType, "FUNCTION", StringComparison.OrdinalIgnoreCase) OrElse String.Equals(columnName, "ORG_RELATE_ID", StringComparison.OrdinalIgnoreCase) OrElse String.Equals(columnName, "ORG_RELATE_ID_2", StringComparison.OrdinalIgnoreCase))) Then
+                        Continue While
+                    End If
+                    options.Add(New CodeAdminFieldOption With {.Value = columnName, .Label = DbString(ReaderValue(reader, "column_rpt_desc"))})
+                End While
+            End Using
+        End Using
+        Return options
+    End Function
+
+    Public Function ListFacPrefEmailFields() As IList(Of CodeAdminFieldOption) Implements ICodeAdminRepository.ListFacPrefEmailFields
+        Const sql As String =
+            "select column_desc, column_rpt_desc from membership_column_detail where form_field_type like 'EMAIL%' and org_sub_ty_cd = 'EMP' " &
+            "union select column_desc, column_rpt_desc from org_column_detail where form_field_type like 'EMAIL%' and org_sub_ty_cd = 'EMP' order by 2, 1"
+        Return ReadLookupOptions(sql, Nothing)
+    End Function
+
+    Public Function ListProducts(organizationId As String) As IList(Of CodeAdminFieldOption) Implements ICodeAdminRepository.ListProducts
+        Dim productTable = If(String.Equals(organizationId, "825", StringComparison.OrdinalIgnoreCase), "product", "batch_product")
+        Dim sql = "select product_id, product_desc from " & productTable & " order by inactive, product_desc"
+        Try
+            Return ReadLookupOptions(sql, Nothing)
+        Catch ex As OleDbException
+            Throw New AccessManagerServiceException("Product lookup is unavailable for this organization.")
+        End Try
+    End Function
+
     Public Function GetValueById(codeValueId As Integer) As CodeAdminValue Implements ICodeAdminRepository.GetValueById
         Const sql As String =
             "select code_value_id, code_class, code_value, code_value_desc, code_value_long_desc, " &
-            "inactive, major_code, minor_code, order_by, form_display " &
+            "inactive, major_code, minor_code, order_by, form_display, " &
+            "option_value_1, option_value_2, option_value_3, option_value_4, option_value_5, option_value_6, " &
+            "option_value_7, option_value_8, option_value_9, option_value_10, option_value_11, option_value_12, " &
+            "option_value_13, option_value_14, option_value_15, option_value_16, option_value_17 " &
             "from code_value where code_value_id = ?"
 
         Using connection As New OleDbConnection(_connectionString),
@@ -154,44 +231,78 @@ Public Class CodeAdminRepository
     End Function
 
     Public Function CreateValue(command As CreateCodeValueCommand, majorCode As String) As CodeAdminValue Implements ICodeAdminRepository.CreateValue
+        Return CreateValueInternal(command, majorCode, False)
+    End Function
+
+    Public Function CreateLicenseObjTypeValue(command As CreateCodeValueCommand, majorCode As String) As CodeAdminValue Implements ICodeAdminRepository.CreateLicenseObjTypeValue
+        Return CreateValueInternal(command, majorCode, True)
+    End Function
+
+    Private Function CreateValueInternal(command As CreateCodeValueCommand, majorCode As String, rebuildLicenseTables As Boolean) As CodeAdminValue
         Const sql As String =
             "insert into code_value (" &
-            "code_class, code_value, code_value_desc, code_value_long_desc, major_code, minor_code, inactive, form_display" &
-            ") values (?, ?, ?, ?, ?, ?, 'N', '')"
+            "code_class, code_value, code_value_desc, code_value_long_desc, major_code, minor_code, inactive, form_display, " &
+            "option_value_1, option_value_2, option_value_3, option_value_4, option_value_5, option_value_6, " &
+            "option_value_7, option_value_8, option_value_9, option_value_10, option_value_11, option_value_12, " &
+            "option_value_13, option_value_14, option_value_15, option_value_16, option_value_17" &
+            ") values (?, ?, ?, ?, ?, ?, 'N', ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"
 
-        Using connection As New OleDbConnection(_connectionString),
-              dbCommand As New OleDbCommand(sql, connection)
+        Using connection As New OleDbConnection(_connectionString)
+            connection.Open()
+            Using transaction = connection.BeginTransaction(), dbCommand As New OleDbCommand(sql, connection, transaction)
             dbCommand.Parameters.Add("@code_class", OleDbType.VarChar, 50).Value = command.CodeClass
             dbCommand.Parameters.Add("@code_value", OleDbType.VarChar, 50).Value = command.CodeValue
             dbCommand.Parameters.Add("@code_value_desc", OleDbType.VarChar, 1000).Value = command.CodeValueDesc
             dbCommand.Parameters.Add("@code_value_long_desc", OleDbType.VarChar, 4000).Value = If(command.CodeValueLongDesc, String.Empty)
             dbCommand.Parameters.Add("@major_code", OleDbType.VarChar, 50).Value = majorCode
             dbCommand.Parameters.Add("@minor_code", OleDbType.VarChar, 50).Value = If(command.MinorCode, String.Empty)
-            connection.Open()
+            AddDetailParameters(dbCommand, command.FormDisplay, GetOptionValues(command))
             dbCommand.ExecuteNonQuery()
+            If rebuildLicenseTables Then
+                RebuildLicenseObjTypeTables(connection, transaction, majorCode)
+            End If
+            transaction.Commit()
+            End Using
         End Using
 
         Return GetValueByClassAndValue(command.CodeClass, command.CodeValue)
     End Function
 
     Public Function UpdateValue(command As UpdateCodeValueCommand) As CodeAdminValue Implements ICodeAdminRepository.UpdateValue
+        Return UpdateValueInternal(command, Nothing, False)
+    End Function
+
+    Public Function UpdateLicenseObjTypeValue(command As UpdateCodeValueCommand, majorCode As String) As CodeAdminValue Implements ICodeAdminRepository.UpdateLicenseObjTypeValue
+        Return UpdateValueInternal(command, majorCode, True)
+    End Function
+
+    Private Function UpdateValueInternal(command As UpdateCodeValueCommand, majorCode As String, rebuildLicenseTables As Boolean) As CodeAdminValue
         Const sql As String =
-            "update code_value set code_value_desc = ?, code_value_long_desc = ?, minor_code = ? " &
+            "update code_value set code_value_desc = ?, code_value_long_desc = ?, minor_code = ?, form_display = ?, " &
+            "option_value_1 = ?, option_value_2 = ?, option_value_3 = ?, option_value_4 = ?, option_value_5 = ?, option_value_6 = ?, " &
+            "option_value_7 = ?, option_value_8 = ?, option_value_9 = ?, option_value_10 = ?, option_value_11 = ?, option_value_12 = ?, " &
+            "option_value_13 = ?, option_value_14 = ?, option_value_15 = ?, option_value_16 = ?, option_value_17 = ? " &
             "where code_value_id = ? and code_class = ? and code_value = ?"
 
-        Using connection As New OleDbConnection(_connectionString),
-              dbCommand As New OleDbCommand(sql, connection)
+        Using connection As New OleDbConnection(_connectionString)
+            connection.Open()
+            Using transaction = connection.BeginTransaction(), dbCommand As New OleDbCommand(sql, connection, transaction)
             dbCommand.Parameters.Add("@code_value_desc", OleDbType.VarChar, 1000).Value = command.CodeValueDesc
             dbCommand.Parameters.Add("@code_value_long_desc", OleDbType.VarChar, 4000).Value = If(command.CodeValueLongDesc, String.Empty)
             dbCommand.Parameters.Add("@minor_code", OleDbType.VarChar, 50).Value = If(command.MinorCode, String.Empty)
+            AddDetailParameters(dbCommand, command.FormDisplay, GetOptionValues(command))
             dbCommand.Parameters.Add("@code_value_id", OleDbType.Integer).Value = command.CodeValueId
             dbCommand.Parameters.Add("@code_class", OleDbType.VarChar, 50).Value = command.CodeClass
             dbCommand.Parameters.Add("@code_value", OleDbType.VarChar, 50).Value = command.CodeValue
-            connection.Open()
             Dim affected = dbCommand.ExecuteNonQuery()
             If affected = 0 Then
                 Throw New AccessManagerValidationException("Code value was not found.")
             End If
+            If rebuildLicenseTables Then
+                RebuildLicenseObjTypeTables(connection, transaction, majorCode)
+            End If
+            transaction.Commit()
+            End Using
         End Using
 
         Return GetValueById(command.CodeValueId)
@@ -233,6 +344,14 @@ Public Class CodeAdminRepository
     End Function
 
     Public Function DeleteValue(codeValueId As Integer) As CodeAdminDeleteResult Implements ICodeAdminRepository.DeleteValue
+        Return DeleteValueInternal(codeValueId, Nothing, False)
+    End Function
+
+    Public Function DeleteLicenseObjTypeValue(codeValueId As Integer, majorCode As String) As CodeAdminDeleteResult Implements ICodeAdminRepository.DeleteLicenseObjTypeValue
+        Return DeleteValueInternal(codeValueId, majorCode, True)
+    End Function
+
+    Private Function DeleteValueInternal(codeValueId As Integer, majorCode As String, rebuildLicenseTables As Boolean) As CodeAdminDeleteResult
         Dim existing = GetValueById(codeValueId)
         If existing Is Nothing Then
             Throw New AccessManagerValidationException("Code value was not found.")
@@ -255,11 +374,19 @@ Public Class CodeAdminRepository
         End If
 
         Const sql As String = "delete from code_value where code_value_id = ?"
-        Using connection As New OleDbConnection(_connectionString),
-              command As New OleDbCommand(sql, connection)
-            command.Parameters.Add("@code_value_id", OleDbType.Integer).Value = codeValueId
+        Using connection As New OleDbConnection(_connectionString)
             connection.Open()
-            command.ExecuteNonQuery()
+            Using transaction = connection.BeginTransaction(), command As New OleDbCommand(sql, connection, transaction)
+                command.Parameters.Add("@code_value_id", OleDbType.Integer).Value = codeValueId
+                Dim affected = command.ExecuteNonQuery()
+                If affected = 0 Then
+                    Throw New AccessManagerValidationException("Code value was not found.")
+                End If
+                If rebuildLicenseTables Then
+                    RebuildLicenseObjTypeTables(connection, transaction, majorCode)
+                End If
+                transaction.Commit()
+            End Using
         End Using
 
         Return New CodeAdminDeleteResult With {
@@ -270,21 +397,27 @@ Public Class CodeAdminRepository
     End Function
 
     Public Sub ActivateValue(codeClass As String, codeValue As String, majorCode As String) Implements ICodeAdminRepository.ActivateValue
-        SetPosition(codeClass, codeValue, GetNextActivePosition(codeClass))
         Const sql As String =
             "update code_value set inactive = 'N' " &
             "where code_class = ? and code_value = ? and major_code = ?"
 
-        Using connection As New OleDbConnection(_connectionString),
-              command As New OleDbCommand(sql, connection)
-            command.Parameters.Add("@code_class", OleDbType.VarChar, 50).Value = codeClass
-            command.Parameters.Add("@code_value", OleDbType.VarChar, 50).Value = codeValue
-            command.Parameters.Add("@major_code", OleDbType.VarChar, 50).Value = majorCode
+        Using connection As New OleDbConnection(_connectionString)
             connection.Open()
-            Dim affected = command.ExecuteNonQuery()
-            If affected = 0 Then
-                Throw New AccessManagerValidationException("Code value was not found.")
-            End If
+            Using transaction = connection.BeginTransaction(), command As New OleDbCommand(sql, connection, transaction)
+                Dim activeValues = ListActiveValuesForPosition(codeClass, connection, transaction)
+                command.Parameters.Add("@code_class", OleDbType.VarChar, 50).Value = codeClass
+                command.Parameters.Add("@code_value", OleDbType.VarChar, 50).Value = codeValue
+                command.Parameters.Add("@major_code", OleDbType.VarChar, 50).Value = majorCode
+                Dim affected = command.ExecuteNonQuery()
+                If affected = 0 Then
+                    Throw New AccessManagerValidationException("Code value was not found.")
+                End If
+                If activeValues.FindIndex(Function(item) String.Equals(item, codeValue, StringComparison.OrdinalIgnoreCase)) < 0 Then
+                    activeValues.Add(codeValue)
+                End If
+                UpdatePositions(codeClass, activeValues, connection, transaction)
+                transaction.Commit()
+            End Using
         End Using
     End Sub
 
@@ -307,32 +440,42 @@ Public Class CodeAdminRepository
     End Sub
 
     Public Sub SetPosition(codeClass As String, codeValue As String, newPosition As Integer) Implements ICodeAdminRepository.SetPosition
-        Dim activeValues = ListActiveValuesForPosition(codeClass)
-        If activeValues.Count = 0 Then
-            Return
-        End If
+        Using connection As New OleDbConnection(_connectionString)
+            connection.Open()
+            Using transaction = connection.BeginTransaction()
+                Dim activeValues = ListActiveValuesForPosition(codeClass, connection, transaction)
+                If activeValues.Count = 0 Then
+                    transaction.Commit()
+                    Return
+                End If
 
-        Dim currentIndex = activeValues.FindIndex(Function(item) String.Equals(item, codeValue, StringComparison.OrdinalIgnoreCase))
-        If currentIndex < 0 Then
-            activeValues.Add(codeValue)
-            currentIndex = activeValues.Count - 1
-        End If
+                Dim currentIndex = activeValues.FindIndex(Function(item) String.Equals(item, codeValue, StringComparison.OrdinalIgnoreCase))
+                If currentIndex < 0 Then
+                    activeValues.Add(codeValue)
+                    currentIndex = activeValues.Count - 1
+                End If
 
-        activeValues.RemoveAt(currentIndex)
-        If newPosition < 1 Then
-            newPosition = 1
-        End If
-        If newPosition > activeValues.Count + 1 Then
-            newPosition = activeValues.Count + 1
-        End If
-        activeValues.Insert(newPosition - 1, codeValue)
-        UpdatePositions(codeClass, activeValues)
+                activeValues.RemoveAt(currentIndex)
+                If newPosition < 1 Then
+                    newPosition = 1
+                End If
+                If newPosition > activeValues.Count + 1 Then
+                    newPosition = activeValues.Count + 1
+                End If
+                activeValues.Insert(newPosition - 1, codeValue)
+                UpdatePositions(codeClass, activeValues, connection, transaction)
+                transaction.Commit()
+            End Using
+        End Using
     End Sub
 
-    Private Function GetValueByClassAndValue(codeClass As String, codeValue As String) As CodeAdminValue
+    Public Function GetValueByClassAndValue(codeClass As String, codeValue As String) As CodeAdminValue Implements ICodeAdminRepository.GetValueByClassAndValue
         Const sql As String =
             "select code_value_id, code_class, code_value, code_value_desc, code_value_long_desc, " &
-            "inactive, major_code, minor_code, order_by, form_display " &
+            "inactive, major_code, minor_code, order_by, form_display, " &
+            "option_value_1, option_value_2, option_value_3, option_value_4, option_value_5, option_value_6, " &
+            "option_value_7, option_value_8, option_value_9, option_value_10, option_value_11, option_value_12, " &
+            "option_value_13, option_value_14, option_value_15, option_value_16, option_value_17 " &
             "from code_value where code_class = ? and code_value = ?"
 
         Using connection As New OleDbConnection(_connectionString),
@@ -349,15 +492,13 @@ Public Class CodeAdminRepository
         End Using
     End Function
 
-    Private Function ListActiveValuesForPosition(codeClass As String) As List(Of String)
+    Private Function ListActiveValuesForPosition(codeClass As String, connection As OleDbConnection, transaction As OleDbTransaction) As List(Of String)
         Const sql As String =
             "select code_value from code_value where code_class = ? and inactive = 'N' order by order_by, code_value_desc"
 
         Dim results As New List(Of String)()
-        Using connection As New OleDbConnection(_connectionString),
-              command As New OleDbCommand(sql, connection)
+        Using command As New OleDbCommand(sql, connection, transaction)
             command.Parameters.Add("@code_class", OleDbType.VarChar, 50).Value = codeClass
-            connection.Open()
             Using reader = command.ExecuteReader()
                 While reader.Read()
                     results.Add(DbString(ReaderValue(reader, "code_value")))
@@ -367,34 +508,86 @@ Public Class CodeAdminRepository
         Return results
     End Function
 
-    Private Function GetNextActivePosition(codeClass As String) As Integer
-        Const sql As String =
-            "select count(*) from code_value where code_class = ? and inactive = 'N' and order_by is not null"
-
-        Using connection As New OleDbConnection(_connectionString),
-              command As New OleDbCommand(sql, connection)
-            command.Parameters.Add("@code_class", OleDbType.VarChar, 50).Value = codeClass
+    Private Function ReadLookupOptions(sql As String, parameters As IList(Of OleDbParameter)) As IList(Of CodeAdminFieldOption)
+        Dim results As New List(Of CodeAdminFieldOption)()
+        Using connection As New OleDbConnection(_connectionString), command As New OleDbCommand(sql, connection)
+            If parameters IsNot Nothing Then
+                Dim parameterIndex As Integer
+                For parameterIndex = 0 To parameters.Count - 1
+                    command.Parameters.Add(parameters(parameterIndex))
+                Next
+            End If
             connection.Open()
-            Return Convert.ToInt32(command.ExecuteScalar(), CultureInfo.InvariantCulture) + 1
+            Using reader = command.ExecuteReader()
+                While reader.Read()
+                    results.Add(New CodeAdminFieldOption With {
+                        .Value = DbString(reader.GetValue(0)),
+                        .Label = DbString(reader.GetValue(1))
+                    })
+                End While
+            End Using
         End Using
+        Return results
     End Function
 
-    Private Sub UpdatePositions(codeClass As String, orderedValues As IList(Of String))
+    Private Sub RebuildLicenseObjTypeTables(connection As OleDbConnection, transaction As OleDbTransaction, majorCode As String)
+        Using deleteWindowShades As New OleDbCommand("delete from SDHLS_LIC_TYPE_WS", connection, transaction),
+              deleteGroups As New OleDbCommand("delete from SDHLS_LIC_TYPE_GROUP", connection, transaction)
+            deleteWindowShades.ExecuteNonQuery()
+            deleteGroups.ExecuteNonQuery()
+        End Using
+
+        Dim values As New List(Of CodeAdminValue)()
+        Const selectSql As String = "select code_value, option_value_1, option_value_2 from code_value where code_class = ? and major_code = ?"
+        Using selectValues As New OleDbCommand(selectSql, connection, transaction)
+            selectValues.Parameters.Add("@code_class", OleDbType.VarChar, 50).Value = "LicenseObjType"
+            selectValues.Parameters.Add("@major_code", OleDbType.VarChar, 50).Value = majorCode
+            Using reader = selectValues.ExecuteReader()
+                While reader.Read()
+                    values.Add(New CodeAdminValue With {
+                        .CodeValue = DbString(reader.GetValue(0)),
+                        .OptionValue1 = DbString(reader.GetValue(1)),
+                        .OptionValue2 = DbString(reader.GetValue(2))
+                    })
+                End While
+            End Using
+        End Using
+        Dim valueIndex As Integer
+        For valueIndex = 0 To values.Count - 1
+            InsertLicenseRelations(connection, transaction, "insert into SDHLS_LIC_TYPE_WS values (?, ?)", values(valueIndex).CodeValue, values(valueIndex).OptionValue1)
+            InsertLicenseRelations(connection, transaction, "insert into SDHLS_LIC_TYPE_GROUP values (?, ?)", values(valueIndex).CodeValue, values(valueIndex).OptionValue2)
+        Next
+    End Sub
+
+    Private Shared Sub InsertLicenseRelations(connection As OleDbConnection, transaction As OleDbTransaction, sql As String, codeValue As String, storedValues As String)
+        Dim values = storedValues.Split(","c)
+        Dim valueIndex As Integer
+        For valueIndex = 0 To values.Length - 1
+            Dim relatedCodeValue = values(valueIndex).Trim()
+            If relatedCodeValue.Length = 0 Then
+                Continue For
+            End If
+            Using insertValue As New OleDbCommand(sql, connection, transaction)
+                insertValue.Parameters.Add("@code_value", OleDbType.VarChar, 50).Value = codeValue
+                insertValue.Parameters.Add("@related_code_value", OleDbType.VarChar, 50).Value = relatedCodeValue
+                insertValue.ExecuteNonQuery()
+            End Using
+        Next
+    End Sub
+
+    Private Sub UpdatePositions(codeClass As String, orderedValues As IList(Of String), connection As OleDbConnection, transaction As OleDbTransaction)
         Const sql As String =
             "update code_value set order_by = ? where code_class = ? and code_value = ?"
 
-        Using connection As New OleDbConnection(_connectionString)
-            connection.Open()
-            Dim position As Integer
-            For position = 0 To orderedValues.Count - 1
-                Using command As New OleDbCommand(sql, connection)
-                    command.Parameters.Add("@order_by", OleDbType.Integer).Value = position + 1
-                    command.Parameters.Add("@code_class", OleDbType.VarChar, 50).Value = codeClass
-                    command.Parameters.Add("@code_value", OleDbType.VarChar, 50).Value = orderedValues(position)
-                    command.ExecuteNonQuery()
-                End Using
-            Next
-        End Using
+        Dim position As Integer
+        For position = 0 To orderedValues.Count - 1
+            Using command As New OleDbCommand(sql, connection, transaction)
+                command.Parameters.Add("@order_by", OleDbType.Integer).Value = position + 1
+                command.Parameters.Add("@code_class", OleDbType.VarChar, 50).Value = codeClass
+                command.Parameters.Add("@code_value", OleDbType.VarChar, 50).Value = orderedValues(position)
+                command.ExecuteNonQuery()
+            End Using
+        Next
     End Sub
 
     Private Function IsValueInUse(existing As CodeAdminValue) As Boolean
@@ -504,8 +697,45 @@ Public Class CodeAdminRepository
             .MinorCode = DbString(ReaderValue(reader, "minor_code")),
             .OrderBy = DbNullableInt(ReaderValue(reader, "order_by")),
             .FormDisplay = DbString(ReaderValue(reader, "form_display")),
+            .OptionValue1 = DbString(ReaderValue(reader, "option_value_1")),
+            .OptionValue2 = DbString(ReaderValue(reader, "option_value_2")),
+            .OptionValue3 = DbString(ReaderValue(reader, "option_value_3")),
+            .OptionValue4 = DbString(ReaderValue(reader, "option_value_4")),
+            .OptionValue5 = DbString(ReaderValue(reader, "option_value_5")),
+            .OptionValue6 = DbString(ReaderValue(reader, "option_value_6")),
+            .OptionValue7 = DbString(ReaderValue(reader, "option_value_7")),
+            .OptionValue8 = DbString(ReaderValue(reader, "option_value_8")),
+            .OptionValue9 = DbString(ReaderValue(reader, "option_value_9")),
+            .OptionValue10 = DbString(ReaderValue(reader, "option_value_10")),
+            .OptionValue11 = DbString(ReaderValue(reader, "option_value_11")),
+            .OptionValue12 = DbString(ReaderValue(reader, "option_value_12")),
+            .OptionValue13 = DbString(ReaderValue(reader, "option_value_13")),
+            .OptionValue14 = DbString(ReaderValue(reader, "option_value_14")),
+            .OptionValue15 = DbString(ReaderValue(reader, "option_value_15")),
+            .OptionValue16 = DbString(ReaderValue(reader, "option_value_16")),
+            .OptionValue17 = DbString(ReaderValue(reader, "option_value_17")),
             .IsProtected = CodeAdminValidation.ValueIsProtected(codeValue)
         }
+    End Function
+
+    Private Shared Sub AddDetailParameters(command As OleDbCommand, formDisplay As String, optionValues As IList(Of String))
+        command.Parameters.Add("@form_display", OleDbType.VarChar, CodeAdminConstants.MaxOptionalValueLength).Value = DbParameterValue(formDisplay)
+        Dim optionIndex As Integer
+        For optionIndex = 0 To optionValues.Count - 1
+            command.Parameters.Add("@option_value_" & (optionIndex + 1).ToString(CultureInfo.InvariantCulture), OleDbType.VarChar, CodeAdminConstants.MaxOptionalValueLength).Value = DbParameterValue(optionValues(optionIndex))
+        Next
+    End Sub
+
+    Private Shared Function GetOptionValues(command As CreateCodeValueCommand) As IList(Of String)
+        Return New String() {command.OptionValue1, command.OptionValue2, command.OptionValue3, command.OptionValue4, command.OptionValue5, command.OptionValue6, command.OptionValue7, command.OptionValue8, command.OptionValue9, command.OptionValue10, command.OptionValue11, command.OptionValue12, command.OptionValue13, command.OptionValue14, command.OptionValue15, command.OptionValue16, command.OptionValue17}
+    End Function
+
+    Private Shared Function GetOptionValues(command As UpdateCodeValueCommand) As IList(Of String)
+        Return New String() {command.OptionValue1, command.OptionValue2, command.OptionValue3, command.OptionValue4, command.OptionValue5, command.OptionValue6, command.OptionValue7, command.OptionValue8, command.OptionValue9, command.OptionValue10, command.OptionValue11, command.OptionValue12, command.OptionValue13, command.OptionValue14, command.OptionValue15, command.OptionValue16, command.OptionValue17}
+    End Function
+
+    Private Shared Function DbParameterValue(value As String) As Object
+        Return If(value Is Nothing, CType(DBNull.Value, Object), value)
     End Function
 
     Private Shared Function ReaderValue(reader As IDataRecord, columnName As String) As Object

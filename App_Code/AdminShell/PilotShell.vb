@@ -3,7 +3,7 @@ Imports System.Text
 Imports System.Web
 
 Public NotInheritable Class PilotShell
-    Private Const ShellAssetVersion As String = "071726m"
+    Private Const ShellAssetVersion As String = "071827b"
     Public Const BuildMarker As String = "pilot-shell-unified"
 
     Private Sub New()
@@ -61,6 +61,7 @@ Public NotInheritable Class PilotShell
         html.AppendLine("| <span id=""timeremaining""></span>")
         html.AppendLine("<span class=""shell-pilot-badge"">Pilot</span>")
         html.AppendLine("</p>")
+        html.AppendLine("<button type=""button"" class=""admin-menu-mobile-toggle"" id=""adminMenuMobileToggle"" aria-controls=""adminMenu"" aria-expanded=""false"" aria-label=""Show admin menu"" title=""Show admin menu""><i class=""fa fa-bars"" aria-hidden=""true""></i></button>")
         html.AppendLine("<div id=""pilotToolNav""></div>")
         html.AppendLine("</div>")
         html.AppendLine("</header>")

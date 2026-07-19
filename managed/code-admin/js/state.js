@@ -8,7 +8,7 @@
         selectedClass: "",
         search: "",
         start: 0,
-        pageSize: 200,
+        loading: false,
         selectedIds: {},
         editor: null
     };

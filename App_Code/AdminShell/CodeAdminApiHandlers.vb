@@ -103,6 +103,7 @@ Public Class CodeAdminWorkspaceHandler
 
     Private Shared Function SerializeWorkspace(workspace As CodeAdminWorkspace) As Dictionary(Of String, Object)
         Dim classes As New List(Of Dictionary(Of String, Object))()
+        Dim fieldMetadata As New Dictionary(Of String, Object)(StringComparer.OrdinalIgnoreCase)
         Dim classIndex As Integer
         For classIndex = 0 To workspace.Classes.Count - 1
             Dim item = workspace.Classes(classIndex)
@@ -113,11 +114,42 @@ Public Class CodeAdminWorkspaceHandler
             })
         Next
 
+        If workspace.FieldMetadata IsNot Nothing Then
+            For Each metadataEntry In workspace.FieldMetadata
+                fieldMetadata(metadataEntry.Key) = SerializeDetailMetadata(metadataEntry.Value)
+            Next
+        End If
+
         Return New Dictionary(Of String, Object) From {
             {"classes", classes},
             {"defaultCodeClass", workspace.DefaultCodeClass},
+            {"majorCode", workspace.MajorCode},
+            {"fieldMetadata", fieldMetadata},
             {"showClassCodes", workspace.ShowClassCodes}
         }
+    End Function
+
+    Public Shared Function SerializeDetailMetadata(metadata As CodeAdminDetailMetadata) As Dictionary(Of String, Object)
+        Dim fields As New List(Of Dictionary(Of String, Object))()
+        Dim fieldIndex As Integer
+        For fieldIndex = 0 To metadata.Fields.Count - 1
+            Dim field = metadata.Fields(fieldIndex)
+            Dim options As New List(Of Dictionary(Of String, Object))()
+            Dim optionIndex As Integer
+            For optionIndex = 0 To field.Options.Count - 1
+                options.Add(New Dictionary(Of String, Object) From {{"value", field.Options(optionIndex).Value}, {"label", field.Options(optionIndex).Label}})
+            Next
+            fields.Add(New Dictionary(Of String, Object) From {
+                {"key", field.Key},
+                {"label", field.Label},
+                {"controlType", field.ControlType},
+                {"required", field.Required},
+                {"options", options},
+                {"section", field.Section},
+                {"order", field.Order}
+            })
+        Next
+        Return New Dictionary(Of String, Object) From {{"fields", fields}}
     End Function
 
     Public ReadOnly Property IsReusable As Boolean Implements IHttpHandler.IsReusable
@@ -156,9 +188,12 @@ Public Class CodeAdminValuesHandler
             Dim codeClass = If(context.Request.QueryString("codeClass"), String.Empty).Trim()
             Dim search = If(context.Request.QueryString("search"), String.Empty).Trim()
             Dim start = ParsePositiveInt(context.Request.QueryString("start"), 0)
-            Dim pageSize = ParsePositiveInt(context.Request.QueryString("rows"), CodeAdminConstants.DefaultPageSize)
-            If pageSize <= 0 Then
-                pageSize = CodeAdminConstants.DefaultPageSize
+            Dim pageSize = CodeAdminConstants.DefaultPageSize
+
+            If String.Equals(context.Request.QueryString("metadata"), "true", StringComparison.OrdinalIgnoreCase) Then
+                Dim codeValue = If(context.Request.QueryString("codeValue"), String.Empty).Trim()
+                PilotJsonApi.WriteJson(context, 200, CodeAdminWorkspaceHandler.SerializeDetailMetadata(service.GetDetailMetadata(codeClass, codeValue)))
+                Return
             End If
 
             Dim idValue = context.Request.QueryString("id")
@@ -242,7 +277,7 @@ Public Class CodeAdminValuesHandler
     End Function
 
     Private Shared Function SerializeValue(value As CodeAdminValue) As Dictionary(Of String, Object)
-        Return New Dictionary(Of String, Object) From {
+        Dim result = New Dictionary(Of String, Object) From {
             {"codeValueId", value.CodeValueId},
             {"codeClass", value.CodeClass},
             {"codeValue", value.CodeValue},
@@ -253,8 +288,47 @@ Public Class CodeAdminValuesHandler
             {"minorCode", value.MinorCode},
             {"orderBy", value.OrderBy},
             {"formDisplay", value.FormDisplay},
+            {"optionValue1", value.OptionValue1},
+            {"optionValue2", value.OptionValue2},
+            {"optionValue3", value.OptionValue3},
+            {"optionValue4", value.OptionValue4},
+            {"optionValue5", value.OptionValue5},
+            {"optionValue6", value.OptionValue6},
+            {"optionValue7", value.OptionValue7},
+            {"optionValue8", value.OptionValue8},
+            {"optionValue9", value.OptionValue9},
+            {"optionValue10", value.OptionValue10},
+            {"optionValue11", value.OptionValue11},
+            {"optionValue12", value.OptionValue12},
+            {"optionValue13", value.OptionValue13},
+            {"optionValue14", value.OptionValue14},
+            {"optionValue15", value.OptionValue15},
+            {"optionValue16", value.OptionValue16},
+            {"optionValue17", value.OptionValue17},
             {"isProtected", value.IsProtected}
         }
+        If value.FieldMetadata IsNot Nothing Then
+            result("fieldMetadata") = SerializeValueDetailMetadata(value.FieldMetadata)
+        End If
+        Return result
+    End Function
+
+    Private Shared Function SerializeValueDetailMetadata(metadata As CodeAdminDetailMetadata) As Dictionary(Of String, Object)
+        Dim fields As New List(Of Dictionary(Of String, Object))()
+        Dim fieldIndex As Integer
+        For fieldIndex = 0 To metadata.Fields.Count - 1
+            Dim field = metadata.Fields(fieldIndex)
+            Dim options As New List(Of Dictionary(Of String, Object))()
+            Dim optionIndex As Integer
+            For optionIndex = 0 To field.Options.Count - 1
+                options.Add(New Dictionary(Of String, Object) From { {"value", field.Options(optionIndex).Value}, {"label", field.Options(optionIndex).Label} })
+            Next
+            fields.Add(New Dictionary(Of String, Object) From {
+                {"key", field.Key}, {"label", field.Label}, {"controlType", field.ControlType},
+                {"required", field.Required}, {"options", options}, {"section", field.Section}, {"order", field.Order}
+            })
+        Next
+        Return New Dictionary(Of String, Object) From { {"fields", fields} }
     End Function
 
     Private Shared Function SerializeDeleteResults(results As IList(Of CodeAdminDeleteResult)) As Dictionary(Of String, Object)

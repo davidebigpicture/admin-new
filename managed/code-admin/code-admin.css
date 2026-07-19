@@ -1,134 +1,421 @@
-#codeAdminApp .workspace-heading {
+.code-admin-message {
+    margin-bottom: 1rem;
+}
+
+#codeAdminApp .code-admin-workspace {
+    padding: 0;
+    overflow: hidden;
+    border-color: #cbd5e1;
+    border-radius: 4px;
+}
+
+#codeAdminApp .code-admin-workspace > .panel-heading {
+    padding: 0.75rem 1rem;
+    border-bottom-color: #cbd5e1;
+    background: #f5f7fa;
+}
+
+#codeAdminApp .code-admin-workspace > .panel-body {
+    padding: 1rem;
+}
+
+#codeAdminApp .code-admin-panel-heading {
     display: flex;
     align-items: center;
     justify-content: space-between;
     gap: 1rem;
-    margin-bottom: 1rem;
 }
 
-#codeAdminApp .workspace-heading h2,
-#codeAdminApp .workspace-heading p {
+#codeAdminApp .code-admin-panel-heading .class-filter {
+    display: flex;
+    align-items: center;
+    gap: 0.45rem;
     margin: 0;
 }
 
-#codeAdminApp .toolbar {
+#codeAdminApp .code-admin-panel-heading .class-filter .control-label {
+    margin: 0;
+    color: #334155;
+    font-size: 0.82rem;
+}
+
+#codeAdminApp .code-admin-panel-heading .class-filter .form-control {
+    width: min(30rem, 50vw);
+    height: 30px;
+    padding: 5px 8px;
+    font-size: 12px;
+}
+
+#codeAdminApp .code-admin-actions {
     display: flex;
     flex-wrap: wrap;
-    gap: 0.75rem;
-    align-items: end;
-    margin-bottom: 1rem;
+    justify-content: flex-end;
+    gap: 0.4rem;
 }
 
-#codeAdminApp .toolbar label {
-    display: grid;
-    gap: 0.25rem;
-    font-size: 0.85rem;
-    color: var(--shell-muted);
+#codeAdminApp .btn-sm,
+#codeAdminApp .btn-group-sm > .btn {
+    min-height: 30px;
+    padding: 5px 10px;
+    font-size: 12px;
+    line-height: 1.5;
 }
 
-#codeAdminApp .toolbar input,
-#codeAdminApp .toolbar select {
-    min-width: 12rem;
+#codeAdminApp .btn-group-xs > .btn {
+    min-height: 22px;
+    padding: 1px 5px;
+    font-size: 12px;
+    line-height: 1.5;
 }
 
-#codeAdminApp .actions {
+#codeAdminApp .code-admin-filters {
     display: flex;
     flex-wrap: wrap;
-    gap: 0.5rem;
+    align-items: flex-end;
+    gap: 0.65rem;
     margin-bottom: 1rem;
+    padding-bottom: 1rem;
+    border-bottom: 1px solid #e2e8f0;
 }
 
-#codeAdminApp table {
+#codeAdminApp .code-admin-filters .form-group {
+    display: flex;
+    flex-direction: column;
+    align-items: stretch;
+    margin: 0;
+}
+
+#codeAdminApp .code-admin-filters .control-label {
+    margin-bottom: 0.2rem;
+    color: #475569;
+    font-size: 0.82rem;
+}
+
+#codeAdminApp .code-admin-filters .form-control {
+    height: 30px;
+    padding: 5px 8px;
+    font-size: 12px;
+}
+
+#codeAdminApp .search-filter {
+    flex: 1 1 16rem;
+}
+
+#codeAdminApp .search-filter .form-control {
     width: 100%;
-    border-collapse: collapse;
 }
 
-#codeAdminApp th,
-#codeAdminApp td {
-    padding: 0.55rem 0.65rem;
-    border-bottom: 1px solid #e1e7ef;
-    text-align: left;
-    vertical-align: top;
+#codeAdminApp .code-values-table-wrap {
+    margin: 0;
+    border: 1px solid #dbe2ea;
+    border-radius: 3px;
 }
 
-#codeAdminApp th {
-    background: #f8fafc;
-    font-size: 0.85rem;
+#codeAdminApp .code-values-table-wrap .table {
+    min-width: 820px;
+    margin-bottom: 0;
 }
 
-#codeAdminApp tr.inactive td {
+#codeAdminApp .table > thead > tr > th {
+    padding: 0.5rem 0.6rem;
+    border-bottom: 2px solid #cbd5e1;
+    background: #eef2f6;
+    color: #334155;
+    font-size: 0.78rem;
+    text-transform: uppercase;
+}
+
+#codeAdminApp .table > tbody > tr > td {
+    padding: 0.55rem 0.6rem;
+    vertical-align: middle;
+}
+
+#codeAdminApp .table-striped > tbody > tr:nth-of-type(odd) {
+    background-color: #f8fafc;
+}
+
+#codeAdminApp .table-hover > tbody > tr:hover {
+    background-color: #fffde8;
+}
+
+#codeAdminApp .code-value-row--inactive > td {
     color: #64748b;
-    background: #f8fafc;
+    background-color: #f1f5f9;
+}
+
+#codeAdminApp .rank-cell {
+    width: 5rem;
+    text-align: center;
+}
+
+#codeAdminApp .select-cell {
+    width: 2.5rem;
+    text-align: center;
+}
+
+#codeAdminApp .status-cell {
+    width: 6.5rem;
+    white-space: nowrap;
+}
+
+#codeAdminApp .action-cell {
+    width: 12.5rem;
+    white-space: nowrap;
+}
+
+#codeAdminApp .value-cell {
+    width: 10rem;
+}
+
+#codeAdminApp .description-cell {
+    min-width: 18rem;
+}
+
+#codeAdminApp .rank-control {
+    width: 3.75rem;
+    height: 28px;
+    padding: 3px 4px;
+    border: 1px solid #aeb8c4;
+    border-radius: 3px;
+    background: #fff;
+    color: #334155;
+    font: inherit;
+    text-align: center;
+}
+
+#codeAdminApp .rank-control:focus {
+    border-color: #337ab7;
+    box-shadow: 0 0 0 2px rgba(51, 122, 183, 0.18);
+    outline: 0;
+}
+
+#codeAdminApp .rank-unavailable {
+    color: #94a3b8;
 }
 
 #codeAdminApp .code-value {
+    padding: 0;
+    border: 0;
+    background: transparent;
+    color: #1e293b;
     font-weight: 600;
+    text-decoration: underline;
 }
 
 #codeAdminApp .long-desc {
+    margin-top: 0.25rem;
     color: var(--shell-muted);
+    font-size: 0.82rem;
+}
+
+#codeAdminApp .code-value-description {
+    color: #64748b;
+}
+
+#codeAdminApp .status-indicator {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+    color: #475569;
+    font-size: 0.82rem;
+}
+
+#codeAdminApp .status-indicator::before {
+    width: 0.5rem;
+    height: 0.5rem;
+    border-radius: 50%;
+    background: #94a3b8;
+    content: "";
+}
+
+#codeAdminApp .status-indicator--active::before {
+    background: #3c9a5f;
+}
+
+#codeAdminApp .row-actions {
+    display: flex;
+    align-items: center;
+    gap: 0.85rem;
+}
+
+#codeAdminApp .row-action {
+    min-height: 0;
+    padding: 0;
+    border: 0;
+    background: transparent;
+    color: #286090;
+    font-size: 0.82rem;
+    font-weight: 500;
+    white-space: nowrap;
+}
+
+#codeAdminApp .row-action:hover,
+#codeAdminApp .row-action:focus {
+    border: 0;
+    background: transparent;
+    color: #163f63;
+    text-decoration: underline;
+}
+
+#codeAdminApp .row-action--danger {
+    color: #a94442;
+}
+
+#codeAdminApp .row-action--danger:hover,
+#codeAdminApp .row-action--danger:focus {
+    color: #843534;
+}
+
+#codeAdminApp .protected-value {
+    color: #64748b;
+    font-size: 0.82rem;
+    font-style: italic;
+}
+
+#codeAdminApp .code-admin-empty {
+    margin: 0;
+}
+
+#codeAdminApp .code-admin-pager {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+    margin-top: 1rem;
+}
+
+#codeAdminApp .code-admin-page-status {
+    margin: 0;
+    color: #475569;
     font-size: 0.85rem;
 }
 
-#codeAdminApp .inline-edit {
-    border: 1px dashed #cbd5e1;
-    border-radius: 0.35rem;
-    padding: 0.15rem 0.35rem;
-    min-width: 6rem;
-}
-
-#codeAdminApp .inline-edit:focus {
-    outline: 2px solid #93c5fd;
-    border-color: #60a5fa;
-}
-
-#codeAdminApp .pagination {
-    display: flex;
-    align-items: center;
-    gap: 0.75rem;
-    margin-top: 1rem;
+#codeAdminApp .code-admin-page-status span {
+    margin-left: 0.6rem;
+    color: #64748b;
 }
 
 #codeAdminApp .editor-panel {
-    margin-top: 1rem;
-    padding: 1rem;
-    border: 1px solid #e1e7ef;
-    border-radius: var(--shell-radius);
-    background: #f8fafc;
+    margin-top: 1.25rem;
+    border-color: #cbd5e1;
+}
+
+#codeAdminApp .editor-panel.code-admin-workspace {
+    margin-top: 0;
+}
+
+#codeAdminApp .editor-panel .panel-heading {
+    padding: 0.75rem 1rem;
+    background: #f5f7fa;
+}
+
+#codeAdminApp .editor-panel-heading {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+}
+
+#codeAdminApp .editor-panel .panel-title {
+    margin: 0;
+    font-size: 1rem;
+}
+
+#codeAdminApp .editor-class-context {
+    margin: 0.2rem 0 0;
+    color: #64748b;
+    font-size: 0.82rem;
 }
 
 #codeAdminApp .editor-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
-    gap: 0.75rem;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 0 1rem;
 }
 
-#codeAdminApp .editor-grid label {
-    display: grid;
-    gap: 0.25rem;
-    font-size: 0.85rem;
+#codeAdminApp .editor-grid .form-group {
+    margin-bottom: 0.8rem;
+}
+
+#codeAdminApp .editor-field-wide {
+    grid-column: span 2;
+}
+
+#codeAdminApp .code-value-static {
+    min-height: 34px;
+    margin: 0;
+    padding: 7px 0;
+    font-weight: 600;
+}
+
+#codeAdminApp .code-admin-radio-options {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.65rem;
+    min-height: 34px;
+    margin: 0;
+    border: 0;
+    padding-top: 7px;
+}
+
+#codeAdminApp .code-admin-radio-options .radio-inline {
+    margin: 0;
+}
+
+#codeAdminApp .editor-grid select[multiple] {
+    min-height: 7.5rem;
 }
 
 #codeAdminApp .editor-actions {
     display: flex;
     gap: 0.5rem;
-    margin-top: 1rem;
+    margin-top: 0.25rem;
 }
 
-#codeAdminApp .status-pill {
-    display: inline-block;
-    padding: 0.15rem 0.5rem;
-    border-radius: 999px;
-    font-size: 0.75rem;
-    font-weight: 600;
-}
+@media (max-width: 860px) {
+    #codeAdminApp .code-admin-panel-heading,
+    #codeAdminApp .code-admin-pager,
+    #codeAdminApp .editor-panel-heading {
+        align-items: stretch;
+        flex-direction: column;
+    }
 
-#codeAdminApp .status-pill.active {
-    background: #dcfce7;
-    color: #166534;
-}
+    #codeAdminApp .code-admin-actions {
+        justify-content: flex-start;
+    }
 
-#codeAdminApp .status-pill.inactive {
-    background: #fee2e2;
-    color: #991b1b;
+    #codeAdminApp .code-admin-panel-heading .class-filter {
+        align-items: stretch;
+        flex-direction: column;
+    }
+
+    #codeAdminApp .code-admin-panel-heading .class-filter .form-control {
+        width: 100%;
+    }
+
+    #codeAdminApp .code-admin-filters {
+        display: grid;
+        grid-template-columns: 1fr 7rem;
+    }
+
+    #codeAdminApp .search-filter {
+        grid-column: 1 / -1;
+    }
+
+    #codeAdminApp .search-filter .form-control {
+        width: 100%;
+    }
+
+    #codeAdminApp .editor-grid {
+        grid-template-columns: 1fr;
+    }
+
+    #codeAdminApp .editor-field-wide {
+        grid-column: auto;
+    }
+
+    #codeAdminApp .code-admin-page-status span {
+        display: block;
+        margin: 0.2rem 0 0;
+    }
 }

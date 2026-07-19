@@ -9,6 +9,7 @@ Module CodeAdminValidationTests
         TestPatchFieldValidation()
         TestProtectedValuesAndClasses()
         TestSqlIdentifierValidation()
+        TestOptionalValueLengthConstant()
 
         If _failures = 0 Then
             Console.WriteLine("All CodeAdminValidation tests passed.")
@@ -50,6 +51,10 @@ Module CodeAdminValidationTests
         AssertNoThrow(
             Sub() CodeAdminValidation.ValidateSqlIdentifier("VALID_COLUMN_1"),
             "valid column identifiers are accepted")
+    End Sub
+
+    Private Sub TestOptionalValueLengthConstant()
+        AssertTrue(CodeAdminConstants.MaxOptionalValueLength = 1000, "optional value and form display length is 1000")
     End Sub
 
     Private Sub AssertTrue(condition As Boolean, message As String)
