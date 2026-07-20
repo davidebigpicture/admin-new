@@ -9,6 +9,6 @@
 <asp:Content ID="ToolScriptsContent" ContentPlaceHolderID="ToolScripts" runat="server">
     <script src="js/state.js?v=071726c"></script>
     <script src="js/reorder.js?v=0719ak"></script>
-    <script src="js/sections-view.js?v=0719route5"></script>
+    <script src="js/sections-view.js?v=0719route6"></script>
     <script src="js/app.js?v=0719s"></script>
 </asp:Content>

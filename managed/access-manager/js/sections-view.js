@@ -187,10 +187,9 @@
 
         const meta = document.createElement("p");
         meta.className = "empty-state section-meta";
-        meta.innerHTML = "Update #" + section.UpdateNo + " &middot; " +
-            (section.Inactive
-                ? "<span class=\"admin-status admin-status--inactive\">Inactive</span>"
-                : "<span class=\"admin-status admin-status--active\">Active</span>");
+        meta.innerHTML = section.Inactive
+            ? "<span class=\"admin-status admin-status--inactive\">Inactive</span>"
+            : "<span class=\"admin-status admin-status--active\">Active</span>";
         identity.appendChild(meta);
         wrapper.appendChild(identity);
 
