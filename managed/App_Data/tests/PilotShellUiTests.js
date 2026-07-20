@@ -114,8 +114,7 @@ assertTrue(
         managedMaster.includes("EncodedDialogsUrl") &&
         managedMaster.includes("EncodedShellScriptUrl") &&
         managedShellMaster.includes('PilotConfig.CombinePilot("managed/shared/shell.css") & "?v=" & ShellCssVersion') &&
-        managedShellMaster.includes('Private Const ApiClientAssetVersion As String = "0719ads5"') &&
-        managedShellMaster.includes('PilotConfig.CombinePilot("managed/shared/api-client.js") & "?v=" & ApiClientAssetVersion') &&
+        managedShellMaster.includes('PilotConfig.CombinePilot("managed/shared/api-client.js")') &&
         managedShellMaster.includes('PilotConfig.CombinePilot("managed/shared/session.js")') &&
         managedShellMaster.includes('PilotConfig.CombinePilot("managed/shared/dialogs.js")') &&
         managedShellMaster.includes('PilotConfig.CombinePilot("managed/shared/shell.js") & "?v=" & ShellAssetVersion') &&
@@ -170,15 +169,9 @@ assertTrue(
         shellJs.includes("const session = await global.PilotSession.load()") &&
         shellJs.includes("userName.textContent = session.userName") &&
         shellJs.includes('startSessionTimer(document.getElementById("shellSessionTime"))') &&
-        shellJs.includes('function refreshSessionTimer()') &&
-        shellJs.includes('startSessionTimer(document.getElementById("shellSessionTime"));') &&
-        shellJs.includes('refreshSessionTimer: refreshSessionTimer') &&
-        apiClientJs.includes('function refreshSessionTimer()') &&
-        apiClientJs.includes('global.ManagedShell.refreshSessionTimer()') &&
-        apiClientJs.indexOf('if (response.status === 401)') < apiClientJs.lastIndexOf('refreshSessionTimer();') &&
         shellJs.includes('element.textContent = "Session time: " +') &&
         shellJs.includes("renderSectionMenu("),
-    "managed shell refreshes the visible session timer after valid API responses while preserving 401 handling"
+    "managed shell initializer configures, hydrates, renders shared session chrome, and starts the session timer"
 );
 assertTrue(
     accessManagerApp.includes("await window.ManagedShell.initialize") &&

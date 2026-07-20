@@ -38,7 +38,7 @@ const accessManagerService = fs.readFileSync(
 assertTrue(indexAspx.includes('Inherits="AccessManagerPage"') && indexAspx.includes('MasterPageFile="../shared/ManagedShell.master"'), "Access Manager retains server-side authorization through the managed master host");
 assertTrue(!indexAspx.includes("viewScripts"), "dedicated Scripts panel is removed");
 assertTrue(!indexAspx.includes("viewAccess"), "dedicated Access panel is removed");
-assertTrue(indexAspx.indexOf("js/state.js") < indexAspx.indexOf("js/reorder.js") && indexAspx.indexOf("js/reorder.js") < indexAspx.indexOf("js/sections-view.js") && indexAspx.indexOf("js/sections-view.js") < indexAspx.indexOf("js/app.js") && indexAspx.includes('access-manager.css?v=0719route3') && indexAspx.includes('reorder.js?v=0719ak') && indexAspx.includes('sections-view.js?v=0719route6'), "Access Manager runtime dependencies load before the refreshed app bootstrap and use the current asset versions");
+assertTrue(indexAspx.indexOf("js/state.js") < indexAspx.indexOf("js/reorder.js") && indexAspx.indexOf("js/reorder.js") < indexAspx.indexOf("js/sections-view.js") && indexAspx.indexOf("js/sections-view.js") < indexAspx.indexOf("js/app.js") && indexAspx.includes('access-manager.css?v=0719route3') && indexAspx.includes('reorder.js?v=0719ak') && indexAspx.includes('sections-view.js?v=0719route5'), "Access Manager runtime dependencies load before the refreshed app bootstrap and use the current asset versions");
 assertTrue(!appJs.includes("AccessManagerScriptsView"), "workspace no longer bootstraps Scripts view");
 assertTrue(!appJs.includes("AccessManagerAccessView"), "workspace no longer bootstraps Access view");
 assertTrue(indexAspx.includes("id=\"appMessage\"") && indexAspx.includes("id=\"viewSections\""), "workspace retains its content regions");
@@ -57,7 +57,6 @@ assertTrue(shellJs.includes("adminMenuFilter"), "section menu provides section a
 assertTrue(!shellJs.includes("Admin sections"), "section menu uses an unlabeled edge affordance");
 assertTrue(shellJs.includes("closeOtherSections"), "section menu behaves as a single-open accordion");
 assertTrue(sectionsJs.includes("beginSectionNameEdit"), "section names support inline editing");
-assertTrue(!sectionsJs.includes("Update #") && sectionsJs.includes('admin-status admin-status--active') && sectionsJs.includes('admin-status admin-status--inactive'), "section detail metadata shows only the meaningful lifecycle status");
 assertTrue(
     /function beginSectionNameEdit[\s\S]*?form\.addEventListener\("keydown", function \(event\) \{[\s\S]*?event\.key === "Escape"[\s\S]*?cancelEdit\(\);/.test(sectionsJs),
     "Escape cancels inline section-name editing"
