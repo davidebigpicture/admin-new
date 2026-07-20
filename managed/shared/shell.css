@@ -399,7 +399,7 @@ table.data tr.inactive td {
 .shell-header__inner,
 .shell-main,
 .shell-footer__inner {
-    max-width: 1480px;
+    max-width: 100%;
     padding-left: clamp(.75rem, 1.5vw, 1rem);
     padding-right: clamp(.75rem, 1.5vw, 1rem);
 }
@@ -783,7 +783,7 @@ table.data td:last-child > .reorder-controls {
     display: grid;
     grid-template-columns: 270px minmax(0, 1fr);
     align-items: start;
-    width: min(100%, 1800px);
+    /* width: min(100%, 1800px); */
     margin: 0 auto;
     transition: grid-template-columns 160ms ease;
 }
