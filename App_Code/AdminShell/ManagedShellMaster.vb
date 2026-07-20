@@ -5,8 +5,9 @@ Imports System.Globalization
 Public Class ManagedShellMaster
     Inherits MasterPage
 
-    Public Const ShellAssetVersion As String = "0719u"
+    Public Const ShellAssetVersion As String = "0719v"
     Private Const ShellCssVersion As String = "0719ads4"
+    Private Const ApiClientAssetVersion As String = "0719ads5"
     Private Const DialogsAssetVersion As String = "0719ads1"
 
     Public Property ToolTitle As String
@@ -57,7 +58,7 @@ Public Class ManagedShellMaster
 
     Public ReadOnly Property EncodedApiClientUrl As String
         Get
-            Return EncodeUrl(PilotConfig.CombinePilot("managed/shared/api-client.js"))
+            Return EncodeUrl(PilotConfig.CombinePilot("managed/shared/api-client.js") & "?v=" & ApiClientAssetVersion)
         End Get
     End Property
 

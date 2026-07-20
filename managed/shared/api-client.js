@@ -39,6 +39,12 @@
         global.location.assign(loginUrl + separator + "returnUrl=" + buildReturnUrl());
     }
 
+    function refreshSessionTimer() {
+        if (global.ManagedShell && typeof global.ManagedShell.refreshSessionTimer === "function") {
+            global.ManagedShell.refreshSessionTimer();
+        }
+    }
+
     async function readJson(response) {
         const contentType = response.headers.get("content-type") || "";
         if (!contentType.toLowerCase().includes("application/json")) {
@@ -85,6 +91,8 @@
         if (payload && payload.csrfToken) {
             setCsrfToken(payload.csrfToken);
         }
+
+        refreshSessionTimer();
 
         if (!response.ok || !payload || payload.ok !== true) {
             const message = (payload && payload.error) || "The request could not be completed.";

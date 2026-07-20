@@ -66,6 +66,10 @@
         update();
     }
 
+    function refreshSessionTimer() {
+        startSessionTimer(document.getElementById("shellSessionTime"));
+    }
+
     function renderNav(container, routes, currentPath) {
         if (!container) {
             return;
@@ -345,6 +349,7 @@
         renderNav: renderNav,
         renderSectionMenu: renderSectionMenu,
         bindLogout: bindLogout,
-        startSessionTimer: startSessionTimer
+        startSessionTimer: startSessionTimer,
+        refreshSessionTimer: refreshSessionTimer
     };
 }(window));
