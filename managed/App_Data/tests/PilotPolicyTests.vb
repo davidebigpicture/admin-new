@@ -10,8 +10,9 @@ Module PilotPolicyTests
         "loginlog.asp=loginlog.asp|Login Log;" &
         "sql_logs.asp=sql_logs.asp|SQL Logs;" &
         "sms_logs.asp=sms_logs.asp|SMS Logs;" &
-        "managed/access-manager/index.html=cgi-bin/accessadmin.pl|Access Manager;" &
-        "managed/code-admin/index.aspx=cgi-bin/codeadminO.pl|Code Admin"
+        "managed/access-manager/index.aspx=cgi-bin/accessadmin.pl|Access Manager;" &
+        "managed/code-admin/index.aspx=cgi-bin/codeadminO.pl|Code Admin;" &
+        "managed/code-admin/index.aspx=cgi-bin/codeadmin.pl|Code Admin"
 
     Function Main() As Integer
         TestAllowedHost()
@@ -72,7 +73,7 @@ Module PilotPolicyTests
 
         AssertTrue(
             PilotPolicy.TryResolveCanonicalPath(
-                "/dev/adminshell/managed/access-manager/index.html",
+                "/dev/adminshell/managed/access-manager/index.aspx",
                 RoutesConfig,
                 PilotRoot,
                 GlobalRoot,
@@ -127,9 +128,22 @@ Module PilotPolicyTests
                 pilotPath),
             "access manager canonical path resolves to a pilot route")
         AssertEqual(
-            "/dev/adminshell/managed/access-manager/index.html",
+            "/dev/adminshell/managed/access-manager/index.aspx",
             pilotPath,
             "access manager canonical path maps to the SPA entry")
+
+        AssertTrue(
+            PilotPolicy.TryResolvePilotPathByCanonical(
+                "/admin/admin/cgi-bin/codeadmin.pl",
+                RoutesConfig,
+                PilotRoot,
+                GlobalRoot,
+                pilotPath),
+            "legacy codeadmin.pl resolves to the managed Code Admin route")
+        AssertEqual(
+            "/dev/adminshell/managed/code-admin/index.aspx",
+            pilotPath,
+            "legacy codeadmin.pl maps to the Code Admin entry")
     End Sub
 
     Private Sub TestReturnUrls()

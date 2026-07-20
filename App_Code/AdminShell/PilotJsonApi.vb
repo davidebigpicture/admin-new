@@ -189,7 +189,7 @@ Public NotInheritable Class PilotJsonApi
         For routeIndex = 0 To routes.Count - 1
             Dim route = routes(routeIndex)
             payload.Add(New Dictionary(Of String, Object) From {
-                {"path", route.PilotPath},
+                {"path", PreferredNavigationPath(route.PilotPath)},
                 {"label", route.NavLabel},
                 {"canonicalPath", route.CanonicalPath}
             })
@@ -229,7 +229,7 @@ Public NotInheritable Class PilotJsonApi
                     items.Add(New Dictionary(Of String, Object) From {
                         {"ScriptId", item.ScriptId},
                         {"Title", item.Title},
-                        {"Path", ResolveMenuItemPath(item.Path)}
+                        {"Path", PreferredNavigationPath(ResolveMenuItemPath(item.Path))}
                     })
                 Next
             End If
@@ -273,6 +273,22 @@ Public NotInheritable Class PilotJsonApi
         End If
 
         Return trimmed
+    End Function
+
+    Private Shared Function PreferredNavigationPath(path As String) As String
+        Const defaultDocument As String = "index.aspx"
+        If String.IsNullOrWhiteSpace(path) Then
+            Return path
+        End If
+
+        Dim suffixStart = path.IndexOfAny(New Char() {"?"c, "#"c})
+        Dim pathPart = If(suffixStart < 0, path, path.Substring(0, suffixStart))
+        Dim suffix = If(suffixStart < 0, String.Empty, path.Substring(suffixStart))
+        If pathPart.EndsWith(defaultDocument, StringComparison.OrdinalIgnoreCase) Then
+            Return pathPart.Substring(0, pathPart.Length - defaultDocument.Length) & suffix
+        End If
+
+        Return path
     End Function
 
     Private Shared Sub WriteRaw(context As HttpContext, payload As Object)

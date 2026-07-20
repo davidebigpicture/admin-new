@@ -15,7 +15,7 @@ function assertTrue(condition, message) {
 }
 
 const managedRoot = path.resolve(__dirname, "..", "..");
-const indexHtml = fs.readFileSync(path.join(managedRoot, "access-manager", "index.html"), "utf8");
+const indexAspx = fs.readFileSync(path.join(managedRoot, "access-manager", "index.aspx"), "utf8");
 const appJs = fs.readFileSync(path.join(managedRoot, "access-manager", "js", "app.js"), "utf8");
 const shellJs = fs.readFileSync(path.join(managedRoot, "shared", "shell.js"), "utf8");
 const sectionsJs = fs.readFileSync(
@@ -23,14 +23,22 @@ const sectionsJs = fs.readFileSync(
     "utf8"
 );
 
-assertTrue(!indexHtml.includes("viewScripts"), "dedicated Scripts panel is removed");
-assertTrue(!indexHtml.includes("viewAccess"), "dedicated Access panel is removed");
+assertTrue(indexAspx.includes('Inherits="AccessManagerPage"') && indexAspx.includes('MasterPageFile="../shared/ManagedShell.master"'), "Access Manager retains server-side authorization through the managed master host");
+assertTrue(!indexAspx.includes("viewScripts"), "dedicated Scripts panel is removed");
+assertTrue(!indexAspx.includes("viewAccess"), "dedicated Access panel is removed");
+assertTrue(indexAspx.indexOf("js/state.js") < indexAspx.indexOf("js/reorder.js") && indexAspx.indexOf("js/reorder.js") < indexAspx.indexOf("js/sections-view.js") && indexAspx.indexOf("js/sections-view.js") < indexAspx.indexOf("js/app.js") && indexAspx.includes('js/app.js?v=0719s'), "Access Manager runtime dependencies load before the refreshed app bootstrap");
 assertTrue(!appJs.includes("AccessManagerScriptsView"), "workspace no longer bootstraps Scripts view");
 assertTrue(!appJs.includes("AccessManagerAccessView"), "workspace no longer bootstraps Access view");
-assertTrue(indexHtml.includes("id=\"adminMenu\""), "workspace includes the legacy-style section menu");
+assertTrue(indexAspx.includes("id=\"appMessage\"") && indexAspx.includes("id=\"viewSections\""), "workspace retains its content regions");
 assertTrue(
-    appJs.includes("renderSectionMenu") && appJs.includes("session.menuSections"),
-    "workspace renders access-filtered menu sections from the session"
+    appJs.includes("await window.ManagedShell.initialize") &&
+        appJs.indexOf("ManagedShell.initialize") < appJs.indexOf("api/workspace.ashx"),
+    "workspace awaits access-filtered shell hydration before loading data"
+);
+assertTrue(
+    !indexAspx.includes("<!DOCTYPE") && !indexAspx.includes("<html") && !indexAspx.includes("<head") && !indexAspx.includes("<body") &&
+        !indexAspx.includes("shell.js") && !indexAspx.includes("api-client.js") && !indexAspx.includes("adminMenu") && !indexAspx.includes("shell-header"),
+    "Access Manager is a thin master-content page without duplicate document or shell chrome"
 );
 assertTrue(shellJs.includes("bpAdminMenuCollapsed"), "section menu remembers its collapsed state");
 assertTrue(shellJs.includes("adminMenuFilter"), "section menu provides section and tool filtering");

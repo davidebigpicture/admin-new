@@ -7,6 +7,7 @@ Read **[`docs/admin-shell-platform.md`](docs/admin-shell-platform.md)** first â€
 | Doc | Use when |
 |-----|----------|
 | [`docs/agent-handoff.md`](docs/agent-handoff.md) | Boundaries, verification, troubleshooting, **Code Admin** status |
+| [`docs/vue-managed-screens.md`](docs/vue-managed-screens.md) | Building or changing zero-build Vue managed screens; Code Admin reference |
 | [`.cursor/rules/browser-e2e.mdc`](.cursor/rules/browser-e2e.mdc) | Browser MCP protocol for pilot UI verification |
 | [`docs/github-repo.md`](docs/github-repo.md) | Git clone, sync, secrets |
 | [`docs/legacy-credential-encoder.md`](docs/legacy-credential-encoder.md) | Legacy cookie bridge |

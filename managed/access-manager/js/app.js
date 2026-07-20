@@ -5,8 +5,6 @@
     const sectionsView = window.AccessManagerSectionsView;
 
     const messageEl = document.getElementById("appMessage");
-    const userEl = document.getElementById("shellUser");
-    const userNameEl = document.getElementById("shellUserName");
     const sectionsPanel = document.getElementById("viewSections");
 
     function showMessage(message) {
@@ -26,24 +24,14 @@
     async function bootstrap() {
         sectionsView.init({ container: sectionsPanel, onError: handleError });
 
-        window.PilotShell.bindLogout(document.getElementById("logoutButton"));
-
         try {
-            const session = await window.PilotSession.load();
+            const session = await window.ManagedShell.initialize({ sessionUrl: "api/session.ashx", apiBase: "" });
             const workspace = await window.PilotApiClient.get("api/workspace.ashx");
             stateApi.set({
                 session: session,
                 workspace: workspace,
                 selectedScriptType: workspace.defaultScriptType || ""
             });
-
-            userNameEl.textContent = session.userName;
-            userEl.hidden = false;
-            window.PilotShell.renderSectionMenu(
-                document.getElementById("adminMenu"),
-                session.menuSections || [],
-                window.location.pathname
-            );
 
             sectionsView.render(stateApi.get());
             showMessage("");

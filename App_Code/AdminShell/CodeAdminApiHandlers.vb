@@ -5,32 +5,29 @@ Imports System.Web
 Imports System.Web.SessionState
 
 Public Class CodeAdminPage
-    Inherits System.Web.UI.Page
+    Inherits ManagedToolPage
 
-    Protected Sub Page_Load(sender As Object, e As EventArgs) Handles Me.Load
-        If Not PilotConfig.IsEnabledForHost(Request.Url.Host) Then
-            Response.StatusCode = 404
-            Response.TrySkipIisCustomErrors = True
-            Response.End()
-            Return
-        End If
+    Protected Overrides ReadOnly Property ToolTitle As String
+        Get
+            Return "Code Admin"
+        End Get
+    End Property
 
-        Dim user As PilotUser = Nothing
-        If Not PilotAuth.TryGetCurrentUser(Context, user) Then
-            Dim returnUrl = HttpUtility.UrlEncode(Request.Url.PathAndQuery)
-            Response.Redirect(PilotConfig.LoginUrl & "?returnUrl=" & returnUrl, False)
-            Context.ApplicationInstance.CompleteRequest()
-            Return
-        End If
+    Protected Overrides ReadOnly Property ToolSubtitle As String
+        Get
+            Return "Manage code classes and values"
+        End Get
+    End Property
 
-        If Not CodeAdminAccess.CanOpenApp(user) Then
-            Response.StatusCode = 403
-            Response.TrySkipIisCustomErrors = True
-            Response.ContentType = "text/html"
-            Response.Write("<p>You do not have permission to use Code Admin.</p>")
-            Response.End()
-        End If
-    End Sub
+    Protected Overrides ReadOnly Property AccessDeniedMessage As String
+        Get
+            Return "You do not have permission to use Code Admin."
+        End Get
+    End Property
+
+    Protected Overrides Function CanOpenTool(user As PilotUser) As Boolean
+        Return CodeAdminAccess.CanOpenApp(user)
+    End Function
 End Class
 
 Public Class CodeAdminSessionHandler

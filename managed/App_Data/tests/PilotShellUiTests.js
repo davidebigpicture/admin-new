@@ -23,24 +23,144 @@ const sessionJs = fs.readFileSync(path.join(managedRoot, "shared", "session.js")
 const apiClientJs = fs.readFileSync(path.join(managedRoot, "shared", "api-client.js"), "utf8");
 const shellCss = fs.readFileSync(path.join(managedRoot, "shared", "shell.css"), "utf8");
 const shellJs = fs.readFileSync(path.join(managedRoot, "shared", "shell.js"), "utf8");
-const accessManagerIndex = fs.readFileSync(path.join(managedRoot, "access-manager", "index.html"), "utf8");
+const managedMaster = fs.readFileSync(path.join(managedRoot, "shared", "ManagedShell.master"), "utf8");
+const managedShellMaster = fs.readFileSync(path.join(managedRoot, "..", "App_Code", "AdminShell", "ManagedShellMaster.vb"), "utf8");
+const managedToolPage = fs.readFileSync(path.join(managedRoot, "..", "App_Code", "AdminShell", "ManagedToolPage.vb"), "utf8");
+const accessManagerPage = fs.readFileSync(path.join(managedRoot, "..", "App_Code", "AdminShell", "AccessManagerPage.vb"), "utf8");
+const accessManagerIndex = fs.readFileSync(path.join(managedRoot, "access-manager", "index.aspx"), "utf8");
+const accessManagerApp = fs.readFileSync(path.join(managedRoot, "access-manager", "js", "app.js"), "utf8");
 const codeAdminIndex = fs.readFileSync(path.join(managedRoot, "code-admin", "index.aspx"), "utf8");
 const sessionHandler = fs.readFileSync(path.join(managedRoot, "api", "session.ashx"), "utf8");
+const pilotJsonApi = fs.readFileSync(path.join(managedRoot, "..", "App_Code", "AdminShell", "PilotJsonApi.vb"), "utf8");
+const webConfig = fs.readFileSync(path.join(managedRoot, "web.config"), "utf8");
 
 assertTrue(pilotShell.includes("admin-layout"), "classic chrome uses the unified admin layout");
 assertTrue(pilotShell.includes("adminMenu"), "classic chrome reserves the section menu container");
 assertTrue(!pilotShell.includes("pilotToolNav"), "classic chrome omits the duplicate top tool navigation");
 assertTrue(pilotShell.includes("managed/shared/shell.css"), "classic chrome loads the shared shell stylesheet");
 assertTrue(pilotShell.includes("PilotSession.load()"), "classic chrome bootstraps the shared session API");
-assertTrue(pilotShell.includes("renderSectionMenu"), "classic chrome hydrates the section menu");
+assertTrue(
+    pilotShell.includes("window.ManagedShell.renderSectionMenu") &&
+        !pilotShell.includes("window.PilotShell"),
+    "classic chrome hydrates the section menu through the current shared shell API"
+);
 assertTrue(!pilotShell.includes("id=\"col-left\""), "classic chrome removes the legacy stub left column");
 assertTrue(
-    [pilotShell, accessManagerIndex, codeAdminIndex].every(function (headerOwner) {
-        return /id=""?adminMenuMobileToggle""?/.test(headerOwner) &&
-            /aria-controls=""?adminMenu""?/.test(headerOwner) &&
-            headerOwner.includes('fa fa-bars');
+    /class=""?shell-logo""?/.test(pilotShell) &&
+        managedMaster.includes('class="shell-logo"') &&
+        managedMaster.includes('src="https://www.ebigpicture.com/img/logo.png"') &&
+        managedMaster.includes('alt="Big Picture Software"'),
+    "classic chrome and the managed master show the linked Big Picture logo"
+);
+assertTrue(
+    managedMaster.indexOf('class="shell-brand__client"><%= EncodedClientTitle %>') < managedMaster.indexOf('<h1><%= EncodedToolTitle %>') &&
+        managedMaster.indexOf('<h1><%= EncodedToolTitle %>') < managedMaster.indexOf('class="shell-brand__subtitle"><%= EncodedToolSubtitle %>') &&
+        managedMaster.includes('id="shellSessionTime"') &&
+        managedMaster.includes('class="shell-logout" id="logoutButton"') &&
+        managedMaster.includes('fa fa-sign-out') &&
+        pilotShell.includes('"<h1>" & encodedTitle') &&
+        pilotShell.includes('class=""shell-brand__client""') &&
+        pilotShell.includes('class=""shell-session-time""') &&
+        pilotShell.includes('class=""shell-logout""') &&
+        !pilotShell.includes('shell-pilot-badge') &&
+        !pilotShell.includes('Admin Shell Pilot'),
+    "classic and managed headers show the tool, client, compact sign-out control, and legacy session time"
+);
+assertTrue(
+    /id=""?adminMenuMobileToggle""?/.test(pilotShell) &&
+        managedMaster.includes('id="adminMenuMobileToggle"') &&
+        managedMaster.includes('aria-controls="adminMenu"') &&
+        managedMaster.includes('class="fa fa-bars"'),
+    "classic chrome and the managed master include the accessible mobile menu button"
+);
+assertTrue(
+    [accessManagerIndex, codeAdminIndex].every(function (managedPage) {
+        return managedPage.includes('MasterPageFile="../shared/ManagedShell.master"') &&
+            !managedPage.includes("<!DOCTYPE") &&
+            !managedPage.includes("<html") &&
+            !managedPage.includes("<head") &&
+            !managedPage.includes("<body") &&
+            !managedPage.includes("shell.js") &&
+            !managedPage.includes("api-client.js") &&
+            !managedPage.includes('class="shell-header"') &&
+            !managedPage.includes('id="adminLayout"') &&
+            !managedPage.includes('id="adminMenu"') &&
+            !managedPage.includes('class="shell-footer"') &&
+            !managedPage.includes('id="shellUser"');
     }),
-    "all shell header owners include the accessible mobile menu button"
+    "managed pages are thin content pages without duplicate document or shell markup"
+);
+assertTrue(
+    managedMaster.includes("<!DOCTYPE html>") &&
+        managedMaster.includes('<html lang="en-US">') &&
+        managedMaster.includes('id="appMain"') &&
+        managedMaster.includes('id="adminLayout"') &&
+        managedMaster.includes('id="adminMenu"') &&
+        managedMaster.includes('id="shellUser"') &&
+        managedMaster.includes('id="shellUserName"') &&
+        managedMaster.includes('id="logoutButton"') &&
+        managedMaster.includes('class="shell-footer"') &&
+        managedMaster.includes('>Admin Shell</div>') &&
+        !managedMaster.includes('Admin Shell Pilot') &&
+        managedMaster.indexOf('ContentPlaceHolder ID="ToolHead"') < managedMaster.indexOf('EncodedShellCssUrl') &&
+        managedMaster.includes("EncodedApiClientUrl") &&
+        managedMaster.includes("EncodedSessionUrl") &&
+        managedMaster.includes("EncodedDialogsUrl") &&
+        managedMaster.includes("EncodedShellScriptUrl") &&
+        managedShellMaster.includes('PilotConfig.CombinePilot("managed/shared/shell.css") & "?v=" & ShellCssVersion') &&
+        managedShellMaster.includes('PilotConfig.CombinePilot("managed/shared/api-client.js")') &&
+        managedShellMaster.includes('PilotConfig.CombinePilot("managed/shared/session.js")') &&
+        managedShellMaster.includes('PilotConfig.CombinePilot("managed/shared/dialogs.js")') &&
+        managedShellMaster.includes('PilotConfig.CombinePilot("managed/shared/shell.js") & "?v=" & ShellAssetVersion') &&
+        !managedShellMaster.includes("~/managed/shared") &&
+        !managedShellMaster.includes("ResolveUrl(") &&
+        (managedMaster.match(/runat="server"/g) || []).length === 3 &&
+        !/<asp:(?!ContentPlaceHolder)/.test(managedMaster) &&
+        !managedMaster.includes("<form") &&
+        !managedMaster.includes("UpdatePanel") &&
+        !managedMaster.includes("GridView"),
+    "managed master owns the HTML5 document, shared chrome, and pilot-relative shared assets with only content placeholders as server controls"
+);
+assertTrue(
+    !shellJs.includes("mountManagedShell") &&
+        !shellJs.includes("shell-header") &&
+        !shellJs.includes("shell-footer"),
+    "shared shell JavaScript hydrates behavior without owning document markup"
+);
+assertTrue(
+    managedToolPage.includes("Inherits Page") &&
+        managedToolPage.includes("PilotConfig.IsEnabledForHost") &&
+        managedToolPage.includes("PilotAuth.TryGetCurrentUser") &&
+        managedToolPage.includes("Response.Redirect") &&
+        managedToolPage.includes("Response.StatusCode = 403") &&
+        managedToolPage.includes("shell.ToolTitle = ToolTitle") &&
+        accessManagerPage.includes("PilotJsonApi.CanUseAccessManager(user)"),
+    "managed tool pages centralize host, authentication, denial, and master metadata while Access Manager uses its API predicate"
+);
+assertTrue(
+    !fs.existsSync(path.join(managedRoot, "access-manager", "index.html")),
+    "obsolete Access Manager index.html entry is removed"
+);
+assertTrue(
+    shellJs.includes("async function initialize(options)") &&
+        shellJs.includes("global.PilotSession.configure") &&
+        shellJs.includes("global.PilotApiClient.setApiBase") &&
+        shellJs.includes("bindLogout(document.getElementById(\"logoutButton\"))") &&
+        shellJs.includes("const session = await global.PilotSession.load()") &&
+        shellJs.includes("userName.textContent = session.userName") &&
+        shellJs.includes('startSessionTimer(document.getElementById("shellSessionTime"))') &&
+        shellJs.includes('element.textContent = "Session time: " +') &&
+        shellJs.includes("renderSectionMenu("),
+    "managed shell initializer configures, hydrates, renders shared session chrome, and starts the session timer"
+);
+assertTrue(
+    accessManagerApp.includes("await window.ManagedShell.initialize") &&
+        accessManagerApp.indexOf("ManagedShell.initialize") < accessManagerApp.indexOf("api/workspace.ashx") &&
+        !accessManagerApp.includes("PilotSession.load") &&
+        !accessManagerApp.includes("bindLogout") &&
+        !accessManagerApp.includes("renderSectionMenu") &&
+        !accessManagerApp.includes("shellUserName"),
+    "Access Manager awaits shared hydration before its workspace and owns no duplicate user, menu, or logout handling"
 );
 assertTrue(
     !accessManagerIndex.includes("pilotToolNav") &&
@@ -53,8 +173,37 @@ assertTrue(sessionHandler.includes("PilotSessionHandler"), "pilot-wide session h
 assertTrue(apiClientJs.includes("setApiBase"), "api client supports a managed base path");
 assertTrue(sessionJs.includes("configure"), "session loader supports endpoint configuration");
 assertTrue(
+    webConfig.includes('managed/code-admin/index.aspx=cgi-bin/codeadminO.pl|Code Admin') &&
+        webConfig.includes('managed/code-admin/index.aspx=cgi-bin/codeadmin.pl|Code Admin'),
+    "both legacy Codes script identities route to managed Code Admin"
+);
+assertTrue(
+    pilotJsonApi.includes('{"path", PreferredNavigationPath(route.PilotPath)}') &&
+        pilotJsonApi.includes('{"Path", PreferredNavigationPath(ResolveMenuItemPath(item.Path))}') &&
+        pilotJsonApi.includes('Const defaultDocument As String = "index.aspx"') &&
+        pilotJsonApi.includes('Dim suffix = If(suffixStart < 0, String.Empty, path.Substring(suffixStart))'),
+    "generated route and menu links prefer directory URLs while retaining URL suffixes"
+);
+assertTrue(
     /@media \(max-width: 900px\)[\s\S]*?\.admin-menu\s*\{[^}]*max-height:\s*70vh;[^}]*opacity:\s*1;[^}]*transition:\s*max-height[^}]*opacity[^}]*\}[^]*?\.menu-collapsed \.admin-menu\s*\{[^}]*max-height:\s*0;[^}]*overflow:\s*hidden;[^}]*opacity:\s*0;[^}]*\}[^]*?\.menu-collapsed \.admin-menu-content\s*\{[^}]*display:\s*block;[^}]*\}[\s\S]*?\.admin-menu-toggle\s*\{[^}]*display:\s*none;[^}]*\}[\s\S]*?\.admin-menu-mobile-toggle\s*\{[^}]*display:\s*inline-flex;/.test(shellCss),
     "mobile shell animates the menu while retaining the hamburger and hidden desktop edge control"
+);
+assertTrue(
+    /@media \(max-width: 900px\)[\s\S]*?body\.pilot-classic \.admin-menu\s*\{[^}]*position:\s*static;[^}]*height:\s*auto;[^}]*max-height:\s*70vh;[^}]*\}[\s\S]*?body\.pilot-classic \.menu-collapsed \.admin-menu\s*\{[^}]*height:\s*0 !important;[^}]*max-height:\s*0 !important;/.test(shellCss),
+    "classic pages release the collapsed mobile menu height instead of reserving a viewport-sized gap"
+);
+const finalCompactShellStart = shellCss.lastIndexOf("@media (max-width: 760px)");
+const finalCompactShellCss = shellCss.slice(finalCompactShellStart);
+assertTrue(
+    finalCompactShellStart > shellCss.indexOf("@media (max-width: 900px)") &&
+        /\.shell-header__inner\s*\{[^}]*grid-template-columns:\s*2\.5rem minmax\(0, 1fr\) 2\.25rem;[^}]*gap:\s*0\.5rem 0\.75rem;[^}]*padding:\s*0\.75rem;/.test(finalCompactShellCss) &&
+        /\.shell-logo\s*\{[^}]*grid-column:\s*1;/.test(finalCompactShellCss) &&
+        /\.shell-brand\s*\{[^}]*grid-column:\s*2;[^}]*grid-row:\s*1;/.test(finalCompactShellCss) &&
+        /\.shell-brand h1\s*\{[^}]*white-space:\s*nowrap;/.test(finalCompactShellCss) &&
+        /\.shell-brand p\s*\{[^}]*display:\s*none;/.test(finalCompactShellCss) &&
+        /\.shell-user\s*\{[^}]*grid-column:\s*1 \/ -1;[^}]*grid-row:\s*2;[^}]*max-width:\s*100%;[^}]*justify-self:\s*end;[^}]*text-align:\s*right;/.test(finalCompactShellCss) &&
+        /\.admin-menu-mobile-toggle\s*\{[^}]*grid-column:\s*3;[^}]*grid-row:\s*1;[^}]*justify-self:\s*end;/.test(finalCompactShellCss),
+    "final compact shell breakpoint keeps the logo, brand, and hamburger on row one and the signed-in user on row two"
 );
 assertTrue(
     /\.admin-menu-mobile-toggle\[aria-expanded="true"\]\s*\{[^}]*border-color:[^}]*background:[^}]*color:/.test(shellCss),
@@ -77,11 +226,15 @@ assertTrue(
     "shell detects the mobile viewport with matchMedia"
 );
 assertTrue(
+    /\.shell-header__inner,\s*\.shell-main,\s*\.shell-footer__inner\s*\{[^}]*padding-left:\s*clamp\(\.75rem, 1\.5vw, 1rem\);[^}]*padding-right:\s*clamp\(\.75rem, 1\.5vw, 1rem\);/.test(shellCss),
+    "shared shell header, main, and footer use the restrained aligned gutter"
+);
+assertTrue(
     /menuState\.isMobileViewport\(\) \? true : menuState\.readStoredCollapsed\(\)/.test(shellJs),
     "shell starts mobile collapsed and restores the stored desktop state"
 );
 assertTrue(
-    shellJs.includes("layout._pilotShellMenuState"),
+    shellJs.includes("layout._managedShellMenuState"),
     "shell reuses the viewport listener across menu rerenders"
 );
 assertTrue(
@@ -134,4 +287,4 @@ if (failures > 0) {
     process.exit(1);
 }
 
-console.log("All PilotShell UI tests passed.");
+console.log("All managed shell UI tests passed.");

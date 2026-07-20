@@ -213,14 +213,8 @@
                 applyRoute(global.CodeAdminNavigation.parseRoute(global.location.search)).catch(handleError);
             }
             async function bootstrap() {
-                global.PilotSession.configure({ sessionUrl: "api/session.ashx" });
-                global.PilotApiClient.setApiBase("");
-                global.PilotShell.bindLogout(document.getElementById("logoutButton"));
                 try {
-                    const session = await global.PilotSession.load();
-                    document.getElementById("shellUserName").textContent = session.userName;
-                    document.getElementById("shellUser").hidden = false;
-                    global.PilotShell.renderSectionMenu(document.getElementById("adminMenu"), session.menuSections || [], global.location.pathname);
+                    await global.ManagedShell.initialize({ sessionUrl: "api/session.ashx", apiBase: "" });
                     await loadWorkspace();
                 } catch (error) { handleError(error); }
             }

@@ -1,0 +1,51 @@
+<%@ Master Language="VB" AutoEventWireup="false" Inherits="ManagedShellMaster" %>
+<!DOCTYPE html>
+<html lang="en-US">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title><%= EncodedToolTitle %></title>
+    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/font-awesome/4.7.0/css/font-awesome.min.css">
+    <link rel="stylesheet" href="<%= EncodedStylesheetUrl %>">
+    <asp:ContentPlaceHolder ID="ToolHead" runat="server" />
+    <link rel="stylesheet" href="<%= EncodedShellCssUrl %>">
+</head>
+<body>
+    <header class="shell-header">
+        <div class="shell-header__inner">
+            <a class="shell-logo" href="https://www.ebigpicture.com/" aria-label="Big Picture Software">
+                <img src="https://www.ebigpicture.com/img/logo.png" alt="Big Picture Software" width="234" height="148">
+            </a>
+            <div class="shell-brand">
+                <p class="shell-brand__client"><%= EncodedClientTitle %></p>
+                <h1><%= EncodedToolTitle %></h1>
+                <p class="shell-brand__subtitle"><%= EncodedToolSubtitle %></p>
+            </div>
+            <p class="shell-user" id="shellUser" hidden>
+                Signed in as <strong id="shellUserName"></strong>
+                <button type="button" class="shell-logout" id="logoutButton" aria-label="Sign out" title="Sign out">
+                    <i class="fa fa-sign-out" aria-hidden="true"></i>
+                </button>
+                <span class="shell-session-time" id="shellSessionTime" data-timeout-seconds="<%= EncodedSessionTimeoutSeconds %>" hidden></span>
+            </p>
+            <button type="button" class="admin-menu-mobile-toggle" id="adminMenuMobileToggle" aria-controls="adminMenu" aria-expanded="false" aria-label="Show admin menu" title="Show admin menu">
+                <i class="fa fa-bars" aria-hidden="true"></i>
+            </button>
+        </div>
+    </header>
+    <div class="admin-layout" id="adminLayout">
+        <aside class="admin-menu" id="adminMenu" aria-label="Primary navigation"></aside>
+        <main class="shell-main" id="appMain">
+            <asp:ContentPlaceHolder ID="MainContent" runat="server" />
+        </main>
+    </div>
+    <footer class="shell-footer">
+        <div class="shell-footer__inner">Admin Shell</div>
+    </footer>
+    <script src="<%= EncodedApiClientUrl %>"></script>
+    <script src="<%= EncodedSessionUrl %>"></script>
+    <script src="<%= EncodedDialogsUrl %>"></script>
+    <script src="<%= EncodedShellScriptUrl %>"></script>
+    <asp:ContentPlaceHolder ID="ToolScripts" runat="server" />
+</body>
+</html>

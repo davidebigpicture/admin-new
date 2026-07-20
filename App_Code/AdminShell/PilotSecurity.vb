@@ -49,6 +49,18 @@ Public NotInheritable Class PilotConfig
         End Get
     End Property
 
+    Public Shared ReadOnly Property SessionTimeoutMinutes As Integer
+        Get
+            Dim configured = Setting("PilotLegacySessionTimeoutMinutes")
+            Dim timeoutMinutes As Integer
+            If Integer.TryParse(configured, NumberStyles.Integer, CultureInfo.InvariantCulture, timeoutMinutes) AndAlso
+                timeoutMinutes > 0 Then
+                Return timeoutMinutes
+            End If
+            Return PilotLegacySession.DefaultTimeoutMinutes
+        End Get
+    End Property
+
     Public Shared ReadOnly Property LoginUrl As String
         Get
             Return PilotPathConfig.Combine(PilotRootPath, "managed/login.html")

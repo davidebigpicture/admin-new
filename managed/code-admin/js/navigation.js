@@ -14,7 +14,7 @@
     }
 
     function listUrl(codeClass) {
-        return "index.aspx?codeClass=" + encodeURIComponent(codeClass || "");
+        return "./?codeClass=" + encodeURIComponent(codeClass || "");
     }
 
     function detailUrl(codeClass, codeValue, id) {

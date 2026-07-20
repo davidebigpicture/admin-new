@@ -1,6 +1,71 @@
 "use strict";
 
 (function (global) {
+    async function initialize(options) {
+        const shellOptions = options || {};
+        if (shellOptions.sessionUrl) {
+            global.PilotSession.configure({ sessionUrl: shellOptions.sessionUrl });
+        }
+        if (Object.prototype.hasOwnProperty.call(shellOptions, "apiBase")) {
+            global.PilotApiClient.setApiBase(shellOptions.apiBase);
+        }
+        bindLogout(document.getElementById("logoutButton"));
+        const session = await global.PilotSession.load();
+        const userName = document.getElementById("shellUserName");
+        const user = document.getElementById("shellUser");
+        if (userName) {
+            userName.textContent = session.userName;
+        }
+        if (user) {
+            user.hidden = false;
+        }
+        startSessionTimer(document.getElementById("shellSessionTime"));
+        renderSectionMenu(
+            document.getElementById("adminMenu"),
+            session.menuSections || [],
+            shellOptions.currentPath || global.location.pathname
+        );
+        return session;
+    }
+
+    function startSessionTimer(element) {
+        if (!element) {
+            return;
+        }
+
+        const timeoutSeconds = Number(element.getAttribute("data-timeout-seconds"));
+        if (!Number.isSafeInteger(timeoutSeconds) || timeoutSeconds <= 0) {
+            return;
+        }
+
+        if (element._sessionTimer) {
+            global.clearTimeout(element._sessionTimer);
+        }
+
+        const expiresAt = Date.now() + timeoutSeconds * 1000;
+        function update() {
+            const remainingSeconds = Math.max(0, Math.ceil((expiresAt - Date.now()) / 1000));
+            const hours = Math.floor(remainingSeconds / 3600);
+            const minutes = Math.floor((remainingSeconds % 3600) / 60);
+            const seconds = remainingSeconds % 60;
+            element.textContent = "Session time: " +
+                String(hours).padStart(2, "0") + ":" +
+                String(minutes).padStart(2, "0") + ":" +
+                String(seconds).padStart(2, "0");
+            element.hidden = false;
+
+            if (remainingSeconds > 0) {
+                element._sessionTimer = global.setTimeout(update, 1000);
+                return;
+            }
+
+            const paths = global.PilotSession.paths();
+            global.location.assign(paths.logoutUrl || "../logout.ashx");
+        }
+
+        update();
+    }
+
     function renderNav(container, routes, currentPath) {
         if (!container) {
             return;
@@ -9,7 +74,7 @@
         container.innerHTML = "";
         const nav = document.createElement("nav");
         nav.className = "shell-nav";
-        nav.setAttribute("aria-label", "Pilot tools");
+        nav.setAttribute("aria-label", "Administration tools");
 
         (routes || []).forEach(function (route) {
             const link = document.createElement("a");
@@ -138,7 +203,7 @@
             return;
         }
         const mobileToggle = document.getElementById("adminMenuMobileToggle");
-        const menuState = layout._pilotShellMenuState || {
+        const menuState = layout._managedShellMenuState || {
             desktopToggle: null,
             mobileToggle: null,
             content: null,
@@ -168,7 +233,7 @@
             }
         });
 
-        if (!layout._pilotShellMenuState) {
+        if (!layout._managedShellMenuState) {
             menuState.mediaQuery = null;
             menuState.readStoredCollapsed = function () {
                 try {
@@ -247,7 +312,7 @@
             } else if (typeof global.addEventListener === "function") {
                 global.addEventListener("resize", menuState.onViewportChange);
             }
-            layout._pilotShellMenuState = menuState;
+            layout._managedShellMenuState = menuState;
         }
 
         toggle.addEventListener("click", function () {
@@ -275,9 +340,11 @@
         });
     }
 
-    global.PilotShell = {
+    global.ManagedShell = {
+        initialize: initialize,
         renderNav: renderNav,
         renderSectionMenu: renderSectionMenu,
-        bindLogout: bindLogout
+        bindLogout: bindLogout,
+        startSessionTimer: startSessionTimer
     };
 }(window));

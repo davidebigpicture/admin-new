@@ -3,7 +3,7 @@ Imports System.Text
 Imports System.Web
 
 Public NotInheritable Class PilotShell
-    Private Const ShellAssetVersion As String = "071827b"
+    Private Const ShellAssetVersion As String = "0719z"
     Public Const BuildMarker As String = "pilot-shell-unified"
 
     Private Sub New()
@@ -49,17 +49,15 @@ Public NotInheritable Class PilotShell
         html.AppendLine("<body class=""bodyVer5 is-dev pilot-classic"" onload=""startTimer()"">")
         html.AppendLine("<header class=""shell-header"">")
         html.AppendLine("<div class=""shell-header__inner"">")
+        html.AppendLine("<a class=""shell-logo"" href=""https://www.ebigpicture.com/"" aria-label=""Big Picture Software""><img src=""https://www.ebigpicture.com/img/logo.png"" alt=""Big Picture Software"" width=""234"" height=""148""></a>")
         html.AppendLine("<div class=""shell-brand"">")
-        html.AppendLine("<h1>" & encodedBanner & "</h1>")
-        If Not String.IsNullOrWhiteSpace(encodedType) Then
-            html.AppendLine("<p>" & encodedType & "</p>")
-        End If
+        html.AppendLine("<h1>" & encodedTitle & "</h1>")
+        html.AppendLine("<p class=""shell-brand__client"">" & encodedBanner & "</p>")
         html.AppendLine("</div>")
         html.AppendLine("<p class=""shell-user"">")
         html.AppendLine("Signed in as <strong>" & encodedUser & "</strong>")
-        html.AppendLine("<button type=""button"" id=""logoutButton"">Sign out</button>")
-        html.AppendLine("| <span id=""timeremaining""></span>")
-        html.AppendLine("<span class=""shell-pilot-badge"">Pilot</span>")
+        html.AppendLine("<button type=""button"" class=""shell-logout"" id=""logoutButton"" aria-label=""Sign out"" title=""Sign out""><i class=""fa fa-sign-out"" aria-hidden=""true""></i></button>")
+        html.AppendLine("<span class=""shell-session-time"" id=""timeremaining""></span>")
         html.AppendLine("</p>")
         html.AppendLine("<button type=""button"" class=""admin-menu-mobile-toggle"" id=""adminMenuMobileToggle"" aria-controls=""adminMenu"" aria-expanded=""false"" aria-label=""Show admin menu"" title=""Show admin menu""><i class=""fa fa-bars"" aria-hidden=""true""></i></button>")
         html.AppendLine("</div>")
@@ -86,7 +84,7 @@ Public NotInheritable Class PilotShell
         html.AppendLine("</main>")
         html.AppendLine("</div>")
         html.AppendLine("<footer class=""shell-footer"">")
-        html.AppendLine("<div class=""shell-footer__inner""><span>Admin Shell Pilot</span></div>")
+        html.AppendLine("<div class=""shell-footer__inner""><span>Admin Shell</span></div>")
         html.AppendLine("</footer>")
         html.AppendLine("<script src=""https://maxcdn.bootstrapcdn.com/bootstrap/3.4.1/js/bootstrap.min.js""></script>")
         html.AppendLine("<script src=""" & apiClientUrl & """></script>")
@@ -94,13 +92,13 @@ Public NotInheritable Class PilotShell
         html.AppendLine("<script src=""" & shellJsUrl & """></script>")
         html.AppendLine("<script>")
         html.AppendLine("(function () {")
-        html.AppendLine("    if (!window.PilotApiClient || !window.PilotSession || !window.PilotShell) { return; }")
+        html.AppendLine("    if (!window.PilotApiClient || !window.PilotSession || !window.ManagedShell) { return; }")
         html.AppendLine("    window.PilotApiClient.setApiBase(window.PilotManagedBase || """");")
         html.AppendLine("    window.PilotSession.configure({ sessionUrl: ""api/session.ashx"" });")
-        html.AppendLine("    window.PilotShell.bindLogout(document.getElementById(""logoutButton""));")
+        html.AppendLine("    window.ManagedShell.bindLogout(document.getElementById(""logoutButton""));")
         html.AppendLine("    var currentPath = window.PilotCurrentPath || """ & activePath & """;")
         html.AppendLine("    window.PilotSession.load().then(function (session) {")
-        html.AppendLine("        window.PilotShell.renderSectionMenu(")
+        html.AppendLine("        window.ManagedShell.renderSectionMenu(")
         html.AppendLine("            document.getElementById(""adminMenu""),")
         html.AppendLine("            session.menuSections || [],")
         html.AppendLine("            currentPath")

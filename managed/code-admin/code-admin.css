@@ -8,18 +8,19 @@
 
 #codeAdminApp .code-admin-workspace {
     padding: 0;
-    overflow: hidden;
-    border-color: #cbd5e1;
-    border-radius: 4px;
+    overflow: visible;
+    border: 0;
+    border-radius: 0;
+    background: transparent;
+    box-shadow: none;
 }
 
-#codeAdminApp .code-admin-workspace > .panel-heading {
+#codeAdminApp .code-admin-workspace__header {
     padding: 0.75rem 1rem;
-    border-bottom-color: #cbd5e1;
-    background: #f5f7fa;
+    border-bottom: 1px solid #cbd5e1;
 }
 
-#codeAdminApp .code-admin-workspace > .panel-body {
+#codeAdminApp .code-admin-workspace__body {
     padding: 1rem;
 }
 

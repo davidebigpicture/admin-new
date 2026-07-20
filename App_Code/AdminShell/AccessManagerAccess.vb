@@ -1,7 +1,7 @@
 Imports System
 
 Public NotInheritable Class AccessManagerAccess
-    Private Const AccessManagerPilotRoute As String = "managed/access-manager/index.html"
+    Private Const AccessManagerPilotRoute As String = "managed/access-manager/index.aspx"
 
     Private Sub New()
     End Sub
