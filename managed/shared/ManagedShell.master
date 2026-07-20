@@ -11,6 +11,9 @@
     <link rel="stylesheet" href="<%= EncodedShellCssUrl %>">
 </head>
 <body>
+    <% If IsDevelopmentSite Then %>
+    <div class="shell-development-banner" role="status">Development Site</div>
+    <% End If %>
     <header class="shell-header">
         <div class="shell-header__inner">
             <a class="shell-logo" href="https://www.ebigpicture.com/" aria-label="Big Picture Software">

@@ -6,7 +6,7 @@ Public Class ManagedShellMaster
     Inherits MasterPage
 
     Public Const ShellAssetVersion As String = "0719u"
-    Private Const ShellCssVersion As String = "0719ads1"
+    Private Const ShellCssVersion As String = "0719ads4"
     Private Const DialogsAssetVersion As String = "0719ads1"
 
     Public Property ToolTitle As String
@@ -27,6 +27,12 @@ Public Class ManagedShellMaster
     Public ReadOnly Property EncodedClientTitle As String
         Get
             Return HttpUtility.HtmlEncode(PilotConfig.BannerTitle)
+        End Get
+    End Property
+
+    Public ReadOnly Property IsDevelopmentSite As Boolean
+        Get
+            Return PilotConfig.IsDevelopmentSite
         End Get
     End Property
 

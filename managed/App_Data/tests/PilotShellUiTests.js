@@ -25,6 +25,7 @@ const shellCss = fs.readFileSync(path.join(managedRoot, "shared", "shell.css"), 
 const shellJs = fs.readFileSync(path.join(managedRoot, "shared", "shell.js"), "utf8");
 const managedMaster = fs.readFileSync(path.join(managedRoot, "shared", "ManagedShell.master"), "utf8");
 const managedShellMaster = fs.readFileSync(path.join(managedRoot, "..", "App_Code", "AdminShell", "ManagedShellMaster.vb"), "utf8");
+const pilotSecurity = fs.readFileSync(path.join(managedRoot, "..", "App_Code", "AdminShell", "PilotSecurity.vb"), "utf8");
 const managedToolPage = fs.readFileSync(path.join(managedRoot, "..", "App_Code", "AdminShell", "ManagedToolPage.vb"), "utf8");
 const adminShellApiGuard = fs.readFileSync(path.join(managedRoot, "..", "App_Code", "AdminShell", "AdminShellApiGuard.vb"), "utf8");
 const adminShellData = fs.readFileSync(path.join(managedRoot, "..", "App_Code", "AdminShell", "AdminShellData.vb"), "utf8");
@@ -215,9 +216,9 @@ const finalCompactShellStart = shellCss.lastIndexOf("@media (max-width: 760px)")
 const finalCompactShellCss = shellCss.slice(finalCompactShellStart);
 assertTrue(
     finalCompactShellStart > shellCss.indexOf("@media (max-width: 900px)") &&
-        /\.shell-header__inner\s*\{[^}]*grid-template-columns:\s*2\.5rem minmax\(0, 1fr\) 2\.25rem;[^}]*gap:\s*0\.5rem 0\.75rem;[^}]*padding:\s*0\.75rem;/.test(finalCompactShellCss) &&
+        /\.shell-header__inner\s*\{[^}]*grid-template-columns:\s*2\.5rem minmax\(0, 1fr\) 2\.5rem;[^}]*gap:\s*0\.5rem 0\.75rem;[^}]*padding:\s*0\.75rem;/.test(finalCompactShellCss) &&
         /\.shell-logo\s*\{[^}]*grid-column:\s*1;/.test(finalCompactShellCss) &&
-        /\.shell-brand\s*\{[^}]*grid-column:\s*2;[^}]*grid-row:\s*1;/.test(finalCompactShellCss) &&
+        /\.shell-brand\s*\{[^}]*grid-column:\s*2;[^}]*grid-row:\s*1;[^}]*max-width:\s*none;[^}]*position:\s*static;[^}]*transform:\s*none;/.test(finalCompactShellCss) &&
         /\.shell-brand h1\s*\{[^}]*white-space:\s*nowrap;/.test(finalCompactShellCss) &&
         /\.shell-brand p\s*\{[^}]*display:\s*none;/.test(finalCompactShellCss) &&
         /\.shell-user\s*\{[^}]*grid-column:\s*1 \/ -1;[^}]*grid-row:\s*2;[^}]*max-width:\s*100%;[^}]*justify-self:\s*end;[^}]*text-align:\s*right;/.test(finalCompactShellCss) &&
@@ -247,6 +248,23 @@ assertTrue(
 assertTrue(
     /\.shell-header__inner,\s*\.shell-main,\s*\.shell-footer__inner\s*\{[^}]*padding-left:\s*clamp\(\.75rem, 1\.5vw, 1rem\);[^}]*padding-right:\s*clamp\(\.75rem, 1\.5vw, 1rem\);/.test(shellCss),
     "shared shell header, main, and footer use the restrained aligned gutter"
+);
+assertTrue(
+    /\.shell-header__inner\s*\{[^}]*grid-template-columns:\s*minmax\(0, 1fr\) auto minmax\(0, 1fr\);/.test(shellCss) &&
+        /\.shell-brand\s*\{[^}]*grid-column:\s*2;[^}]*justify-self:\s*center;/.test(shellCss),
+    "desktop shell centers the brand block between symmetric logo and user-control columns"
+);
+assertTrue(
+    pilotSecurity.includes('Public Shared ReadOnly Property IsDevelopmentSite') &&
+        pilotSecurity.includes('context.Application("DEV_DOMAIN")') &&
+        pilotSecurity.includes('host.IndexOf("dev", StringComparison.OrdinalIgnoreCase)') &&
+        pilotSecurity.includes('context.Items(DevelopmentSiteItemKey) = isDevelopment') &&
+        managedShellMaster.includes('Private Const ShellCssVersion As String = "0719ads4"') &&
+        managedShellMaster.includes('Return PilotConfig.IsDevelopmentSite') &&
+        managedMaster.includes('<% If IsDevelopmentSite Then %>') &&
+        managedMaster.includes('class="shell-development-banner"') &&
+        /\.shell-development-banner\s*\{[^}]*border-bottom: 3px solid #facc15;[^}]*background: #f97316;[^}]*text-align: center;/.test(shellCss),
+    "the shared shell caches development-site detection and renders a top development banner only for development hosts"
 );
 assertTrue(
     /menuState\.isMobileViewport\(\) \? true : menuState\.readStoredCollapsed\(\)/.test(shellJs),

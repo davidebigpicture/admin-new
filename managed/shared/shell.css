@@ -406,7 +406,7 @@ table.data tr.inactive td {
 
 .shell-header__inner {
     display: grid;
-    grid-template-columns: auto minmax(0, 1fr) auto;
+    grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
     align-items: center;
     gap: 0.65rem 1.5rem;
     padding-top: 1rem;
@@ -436,7 +436,19 @@ table.data tr.inactive td {
 .shell-brand {
     grid-column: 2;
     grid-row: 1;
+    justify-self: center;
     min-width: 0;
+}
+
+.shell-development-banner {
+    padding: 0.2rem 1rem;
+    border-bottom: 3px solid #facc15;
+    background: #f97316;
+    color: #fff;
+    font-size: 0.78rem;
+    font-weight: 700;
+    line-height: 1.2;
+    text-align: center;
 }
 
 .shell-brand h1 {
@@ -1060,7 +1072,18 @@ body.pilot-classic #menuModule {
 
 @media (max-width: 900px) {
     .shell-header__inner {
+        position: relative;
         grid-template-columns: 3rem minmax(0, 1fr) auto auto;
+    }
+
+    .shell-brand {
+        grid-column: auto;
+        grid-row: auto;
+        position: absolute;
+        left: 50%;
+        max-width: calc(100% - 22rem);
+        justify-self: auto;
+        transform: translateX(-50%);
     }
 
     .shell-user {
@@ -1153,7 +1176,7 @@ body.pilot-classic #menuModule {
 
 @media (max-width: 760px) {
     .shell-header__inner {
-        grid-template-columns: 2.5rem minmax(0, 1fr) 2.25rem;
+        grid-template-columns: 2.5rem minmax(0, 1fr) 2.5rem;
         gap: 0.5rem 0.75rem;
         padding: 0.75rem;
     }
@@ -1171,6 +1194,9 @@ body.pilot-classic #menuModule {
         grid-column: 2;
         grid-row: 1;
         min-width: 0;
+        max-width: none;
+        position: static;
+        transform: none;
     }
 
     .shell-brand h1 {

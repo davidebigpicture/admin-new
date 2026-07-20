@@ -10,6 +10,8 @@ Imports System.Web
 Imports System.Web.Security
 
 Public NotInheritable Class PilotConfig
+    Private Const DevelopmentSiteItemKey As String = "AdminShell.IsDevelopmentSite"
+
     Private Sub New()
     End Sub
 
@@ -94,6 +96,30 @@ Public NotInheritable Class PilotConfig
     Public Shared ReadOnly Property BannerType As String
         Get
             Return Setting("PilotBannerType")
+        End Get
+    End Property
+
+    Public Shared ReadOnly Property IsDevelopmentSite As Boolean
+        Get
+            Dim context = HttpContext.Current
+            If context Is Nothing OrElse context.Request Is Nothing Then
+                Return False
+            End If
+
+            If context.Items.Contains(DevelopmentSiteItemKey) Then
+                Return CBool(context.Items(DevelopmentSiteItemKey))
+            End If
+
+            Dim host = context.Request.Url.DnsSafeHost
+            Dim configuredDevelopmentDomain = Convert.ToString(context.Application("DEV_DOMAIN"))
+            Dim isDevelopmentHost =
+                Not String.IsNullOrWhiteSpace(configuredDevelopmentDomain) AndAlso
+                String.Equals(host, configuredDevelopmentDomain, StringComparison.OrdinalIgnoreCase)
+            Dim isDevelopment = isDevelopmentHost OrElse
+                host.IndexOf("dev", StringComparison.OrdinalIgnoreCase) >= 0
+
+            context.Items(DevelopmentSiteItemKey) = isDevelopment
+            Return isDevelopment
         End Get
     End Property
 
