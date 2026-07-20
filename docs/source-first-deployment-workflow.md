@@ -147,6 +147,14 @@ For server changes, compile the complete recursive admin-shell source graph. Use
 the installed .NET Framework compiler and the deployed Redis assembly reference;
 derive source paths rather than maintaining a hand-written list.
 
+Before running this command on a new workstation, install the **.NET Framework
+4.8 Developer Pack** and confirm both
+`C:\Windows\Microsoft.NET\Framework64\v4.0.30319\vbc.exe` and
+`C:\Windows\Microsoft.NET\Framework64\v4.0.30319\aspnet_compiler.exe` exist.
+No local Redis server is required: Redis runs in the environment. The command
+references `StackExchange.Redis.dll` only because the source imports its client
+types; obtain that assembly from the documented development `bin` location.
+
 ```powershell
 $repo = 'E:\web\repos\admin-new'
 $compiler = 'C:\Windows\Microsoft.NET\Framework64\v4.0.30319\vbc.exe'

@@ -276,6 +276,18 @@ Install or confirm:
 - local copies of non-framework assemblies needed for compilation;
 - Node.js only when the site has JavaScript tests or build tooling.
 
+### .NET Framework compiler tools
+
+Install the **.NET Framework 4.8 Developer Pack** on every development
+workstation that must compile this Web Site. The runtime alone is not an
+adequate development prerequisite. Confirm that the Developer Pack provides
+both tools:
+
+```text
+C:\Windows\Microsoft.NET\Framework64\v4.0.30319\vbc.exe
+C:\Windows\Microsoft.NET\Framework64\v4.0.30319\aspnet_compiler.exe
+```
+
 The .NET Framework 4.x command-line tools remain in a directory named
 `v4.0.30319`:
 
@@ -293,6 +305,16 @@ Use the toolset matching the IIS application pool when bitness matters. A
 assemblies. Compilation does not prove that a database provider or COM/native
 dependency can load under the IIS identity, so those integrations still require
 runtime verification on the development server.
+
+### Service dependencies versus compile references
+
+A workstation does not need to run Redis merely because the Web Site uses a
+Redis-backed session implementation. Redis is an environment service. A full
+source compile may still need the application's Redis *client assembly* as a
+reference, such as `StackExchange.Redis.dll` from the development deployment's
+`bin` directory. Copy or map that assembly according to the site's documented
+local dependency process; do not install or configure a local Redis server for
+compile-only validation.
 
 ## Creating the local Git repository
 
