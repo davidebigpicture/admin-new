@@ -3,7 +3,7 @@ Imports System.Text
 Imports System.Web
 
 Public NotInheritable Class PilotShell
-    Private Const ShellAssetVersion As String = "0719z"
+    Private Const ShellAssetVersion As String = "0719ads1"
     Public Const BuildMarker As String = "pilot-shell-unified"
 
     Private Sub New()

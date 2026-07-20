@@ -23,7 +23,7 @@
         },
         template: `
             <section class="editor-panel code-admin-workspace panel panel-default" aria-labelledby="codeValueEditorTitle">
-                <div class="panel-heading editor-panel-heading"><div><h3 id="codeValueEditorTitle" class="panel-title">{{ draft.mode === "edit" ? "Edit " + draft.codeValue : "Add code value" }}</h3><p class="editor-class-context">{{ selectedClassLabel }}</p></div><button type="button" class="btn btn-default btn-sm" @click="$emit('cancel')"><i class="fa fa-arrow-left" aria-hidden="true"></i> Back to list</button></div>
+                <div class="panel-heading editor-panel-heading"><div><h3 id="codeValueEditorTitle" class="panel-title">{{ draft.mode === "edit" ? "Edit " + draft.codeValue : "Add code value" }}</h3><p class="editor-class-context">{{ selectedClassLabel }}</p></div><div class="admin-actions admin-actions--end"><button type="button" class="admin-action admin-action--secondary admin-action--sm" @click="$emit('cancel')"><i class="fa fa-arrow-left" aria-hidden="true"></i> Back to list</button></div></div>
                 <div class="panel-body"><form id="codeValueEditor" @submit.prevent="$emit('save')"><div class="editor-grid">
                     <div v-if="draft.mode === 'edit'" class="form-group"><label class="control-label">Value</label><p class="form-control-static code-value-static">{{ draft.codeValue }}</p></div>
                     <div v-if="draft.mode === 'edit'" class="form-group"><label class="control-label" for="codeValueRank">Rank</label><input id="codeValueRank" v-model.number="draft.orderBy" class="form-control" type="number" min="1" step="1" :disabled="draft.isProtected || draft.inactive || (draft.status && draft.status !== 'N')"></div>
@@ -35,7 +35,7 @@
                         <select v-else-if="field.controlType === 'select' || field.controlType === 'multiselect'" :id="'detail-' + field.key" v-model="draft[field.key]" class="form-control" :multiple="field.controlType === 'multiselect'" :required="field.required"><option v-if="field.controlType === 'select'" value=""></option><option v-for="option in field.options" :key="option.value" :value="option.value">{{ option.label }}</option></select>
                         <input v-else :id="'detail-' + field.key" v-model="draft[field.key]" class="form-control" :required="field.required">
                     </div>
-                </div><div class="editor-actions"><button type="submit" class="btn btn-primary btn-sm"><i class="fa fa-check" aria-hidden="true"></i> Save</button><button type="button" class="btn btn-default btn-sm" @click="$emit('cancel')">Cancel</button></div></form></div>
+                </div><div class="editor-actions admin-actions"><button type="submit" class="admin-action admin-action--primary admin-action--sm"><i class="fa fa-check" aria-hidden="true"></i> Save</button><button type="button" class="admin-action admin-action--secondary admin-action--sm" @click="$emit('cancel')"><i class="fa fa-times" aria-hidden="true"></i> Cancel</button></div></form></div>
             </section>`
     };
 }(window));

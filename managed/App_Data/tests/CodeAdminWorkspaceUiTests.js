@@ -19,10 +19,11 @@ const workspaceJs = read(path.join(managedRoot, "code-admin", "js", "components"
 const navigationJs = read(path.join(managedRoot, "code-admin", "js", "navigation.js"));
 const codeAdminCss = read(path.join(managedRoot, "code-admin", "code-admin.css"));
 const inlineEditCss = read(path.join(managedRoot, "shared", "inline-edit.css"));
+const shellCss = read(path.join(managedRoot, "shared", "shell.css"));
 
 assertTrue(indexAspx.includes('Inherits="CodeAdminPage"') && indexAspx.includes('MasterPageFile="../shared/ManagedShell.master"'), "Code Admin retains server-side authorization through the managed master host");
 assertTrue(indexAspx.indexOf("vue.global.prod.js") < indexAspx.indexOf("inline-edit.js") && indexAspx.indexOf("components/editor.js") < indexAspx.indexOf("components/workspace.js") && indexAspx.indexOf("components/workspace.js") < indexAspx.indexOf("js/app.js"), "Vue dependencies load before Code Admin components and app");
-assertTrue(indexAspx.includes('code-admin.css?v=0719u') && indexAspx.includes('../shared/inline-edit.css?v=0719af') && indexAspx.includes('../shared/inline-edit.js?v=0719ag') && indexAspx.includes('js/navigation.js?v=0719t') && indexAspx.includes('js/components/editor.js?v=0719ai') && indexAspx.includes('js/components/workspace.js?v=0719w') && indexAspx.includes('js/app.js?v=0719s') && !indexAspx.includes('inline-edit.css?v=0719v'), "Code Admin refreshes only the changed runtime assets");
+assertTrue(indexAspx.includes('code-admin.css?v=0719ads1') && indexAspx.includes('../shared/inline-edit.css?v=0719af') && indexAspx.includes('../shared/inline-edit.js?v=0719ag') && indexAspx.includes('js/navigation.js?v=0719t') && indexAspx.includes('js/components/editor.js?v=0719ads1') && indexAspx.includes('js/components/workspace.js?v=0719ads1') && indexAspx.includes('js/app.js?v=0719ads1') && !indexAspx.includes('inline-edit.css?v=0719v'), "Code Admin refreshes only the changed runtime assets");
 assertTrue(navigationJs.includes('return "./?codeClass=" + encodeURIComponent(codeClass || "");') && !navigationJs.includes('return "index.aspx?codeClass="'), "Code Admin history uses the directory URL instead of index.aspx");
 assertTrue(!indexAspx.includes("shell.js") && !indexAspx.includes("api-client.js") && !indexAspx.includes("PilotShell.mountManagedShell") && !indexAspx.includes("<!DOCTYPE") && !indexAspx.includes("<html") && !indexAspx.includes("<head") && !indexAspx.includes("<body") && !indexAspx.includes('class="shell-header"') && !indexAspx.includes('id="adminMenu"'), "Code Admin is a thin master-content page without duplicate document or shell assets");
 assertTrue(appJs.includes("await global.ManagedShell.initialize") && appJs.indexOf("ManagedShell.initialize") < appJs.indexOf("await loadWorkspace()") && !appJs.includes("PilotSession.configure") && !appJs.includes("PilotSession.load") && !appJs.includes("bindLogout") && !appJs.includes("renderSectionMenu"), "Code Admin awaits shared session hydration before workspace loading and does not duplicate shell hydration");
@@ -53,6 +54,23 @@ assertTrue(editorJs.includes('v-if="draft.mode === \'edit\'"') && editorJs.inclu
 assertTrue(appJs.includes("originalOrderBy: item.orderBy") && appJs.includes("const rankChanged") && appJs.includes("Rank must be a positive whole number.") && appJs.includes('action=position') && appJs.includes("newPosition: requestedRank"), "Save tracks the original rank and persists a valid changed rank through the position endpoint");
 assertTrue(/\.description-cell \.admin-inline-edit__display\s*\{[^}]*border-bottom: 1px dashed currentColor;/.test(codeAdminCss), "description targets retain the shared dashed underline treatment");
 assertTrue((workspaceJs.match(/CodeAdminComponents\.Workspace/g) || []).length === 1 && !/\/\*[\s\S]*\*\/$/.test(read(__filename)), "the file contains one active workspace suite with no trailing block-comment duplicate");
+assertTrue(
+    workspaceJs.includes('code-admin-actions admin-actions admin-actions--end') &&
+        workspaceJs.includes('admin-action admin-action--danger admin-action--sm') &&
+        workspaceJs.includes('admin-action admin-action--primary admin-action--sm') &&
+        workspaceJs.includes('admin-action admin-action--secondary admin-action--sm') &&
+        workspaceJs.includes('class-admin-link admin-action admin-action--quiet admin-action--sm') &&
+        editorJs.includes('admin-action admin-action--secondary admin-action--sm') &&
+        editorJs.includes('admin-action admin-action--primary admin-action--sm') &&
+        editorJs.includes('fa fa-times') &&
+        appJs.includes('global.AdminShellDialogs') &&
+        !appJs.includes('PilotDialogs') &&
+        !/btn btn-(primary|danger|default)/.test(workspaceJs) &&
+        !/btn btn-(primary|danger|default)/.test(editorJs) &&
+        shellCss.includes('.admin-inline-edit--status-active') &&
+        shellCss.includes('var(--admin-status-active-text)'),
+    "Code Admin commands use shared semantic actions, neutral dialogs, and the shared status palette"
+);
 
 if (failures > 0) { process.exit(1); }
 console.log("All Code Admin workspace UI tests passed.");

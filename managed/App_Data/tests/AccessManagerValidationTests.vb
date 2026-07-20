@@ -20,10 +20,10 @@ Module AccessManagerValidationTests
     End Function
 
     Private Sub TestSectionNameValidation()
-        AssertThrows(Of AccessManagerValidationException)(
+        AssertThrows(Of AdminShellValidationException)(
             Sub() AccessManagerValidation.ValidateSectionName(""),
             "blank section names are rejected")
-        AssertThrows(Of AccessManagerValidationException)(
+        AssertThrows(Of AdminShellValidationException)(
             Sub() AccessManagerValidation.ValidateSectionName("Bad|Name"),
             "pipe characters are rejected in section names")
         AssertNoThrow(
@@ -32,10 +32,10 @@ Module AccessManagerValidationTests
     End Sub
 
     Private Sub TestScriptNameValidation()
-        AssertThrows(Of AccessManagerValidationException)(
+        AssertThrows(Of AdminShellValidationException)(
             Sub() AccessManagerValidation.ValidateScriptName("relative/path.asp"),
             "script paths must be absolute")
-        AssertThrows(Of AccessManagerValidationException)(
+        AssertThrows(Of AdminShellValidationException)(
             Sub() AccessManagerValidation.ValidateScriptName("/admin/../views.asp"),
             "parent segments are rejected in script paths")
         AssertNoThrow(
@@ -44,10 +44,10 @@ Module AccessManagerValidationTests
     End Sub
 
     Private Sub TestGrantValidation()
-        AssertThrows(Of AccessManagerValidationException)(
+        AssertThrows(Of AdminShellValidationException)(
             Sub() AccessManagerValidation.ValidateGrantTarget("BAD", 1),
             "invalid secure types are rejected")
-        AssertThrows(Of AccessManagerValidationException)(
+        AssertThrows(Of AdminShellValidationException)(
             Sub() AccessManagerValidation.ValidateGrantPrincipal("USER", 0),
             "zero principal ids are rejected")
         AssertNoThrow(
@@ -56,7 +56,7 @@ Module AccessManagerValidationTests
     End Sub
 
     Private Sub TestHardDeleteConfirmation()
-        AssertThrows(Of AccessManagerValidationException)(
+        AssertThrows(Of AdminShellValidationException)(
             Sub() AccessManagerValidation.ValidateHardDeleteConfirmed(False),
             "hard delete requires confirmation")
         AssertNoThrow(

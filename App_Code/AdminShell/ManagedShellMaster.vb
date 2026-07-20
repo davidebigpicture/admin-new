@@ -6,7 +6,8 @@ Public Class ManagedShellMaster
     Inherits MasterPage
 
     Public Const ShellAssetVersion As String = "0719u"
-    Private Const ShellCssVersion As String = "0719z"
+    Private Const ShellCssVersion As String = "0719ads1"
+    Private Const DialogsAssetVersion As String = "0719ads1"
 
     Public Property ToolTitle As String
     Public Property ToolSubtitle As String
@@ -62,7 +63,7 @@ Public Class ManagedShellMaster
 
     Public ReadOnly Property EncodedDialogsUrl As String
         Get
-            Return EncodeUrl(PilotConfig.CombinePilot("managed/shared/dialogs.js"))
+            Return EncodeUrl(PilotConfig.CombinePilot("managed/shared/dialogs.js") & "?v=" & DialogsAssetVersion)
         End Get
     End Property
 

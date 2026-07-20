@@ -87,9 +87,9 @@ Public Class AccessManagerRepository
             Using reader = command.ExecuteReader()
                 While reader.Read()
                     results.Add(New AccessManagerScriptType With {
-                        .CodeValue = DbString(reader("code_value")),
-                        .CodeValueDesc = DbString(reader("code_value_desc")),
-                        .OrderBy = DbNullableInt(reader("position"))
+                        .CodeValue = AdminShellData.StringValue(reader("code_value")),
+                        .CodeValueDesc = AdminShellData.StringValue(reader("code_value_desc")),
+                        .OrderBy = AdminShellData.NullableInt(reader("position"))
                     })
                 End While
             End Using
@@ -319,7 +319,7 @@ Public Class AccessManagerRepository
     Public Function GetSectionDeleteImpact(sectionId As Integer) As AccessManagerDeleteImpact Implements IAccessManagerRepository.GetSectionDeleteImpact
         Dim section = GetSection(sectionId)
         If section Is Nothing Then
-            Throw New AccessManagerValidationException("Section was not found.")
+            Throw New AdminShellValidationException("Section was not found.")
         End If
 
         Using connection As New OdbcConnection(_connectionString)
@@ -338,7 +338,7 @@ Public Class AccessManagerRepository
     Public Function GetScriptDeleteImpact(scriptId As Integer) As AccessManagerDeleteImpact Implements IAccessManagerRepository.GetScriptDeleteImpact
         Dim script = GetScript(scriptId)
         If script Is Nothing Then
-            Throw New AccessManagerValidationException("Script was not found.")
+            Throw New AdminShellValidationException("Script was not found.")
         End If
 
         Using connection As New OdbcConnection(_connectionString)
@@ -357,7 +357,7 @@ Public Class AccessManagerRepository
     Public Function GetEffectiveAccess(query As EffectiveAccessQuery) As AccessManagerEffectiveAccess Implements IAccessManagerRepository.GetEffectiveAccess
         Dim script = GetScript(query.ScriptId)
         If script Is Nothing Then
-            Throw New AccessManagerValidationException("Script was not found.")
+            Throw New AdminShellValidationException("Script was not found.")
         End If
 
         Dim result As New AccessManagerEffectiveAccess With {
@@ -624,7 +624,7 @@ Public Class AccessManagerRepository
             connection.Open()
             Using transaction = connection.BeginTransaction()
                 If SectionScriptExists(connection, transaction, command.SectionId, command.ScriptId) Then
-                    Throw New AccessManagerValidationException("Script is already assigned to this section.")
+                    Throw New AdminShellValidationException("Script is already assigned to this section.")
                 End If
 
                 Dim nextPosition = GetMaxPosition(connection, transaction,
@@ -753,12 +753,12 @@ Public Class AccessManagerRepository
         Return New AccessManagerSection With {
             .SectionId = Convert.ToInt32(reader("section_id"), CultureInfo.InvariantCulture),
             .ParentId = Convert.ToInt32(reader("parent_id"), CultureInfo.InvariantCulture),
-            .SectionName = DbString(reader("section")),
-            .Position = DbNullableInt(reader("position")),
+            .SectionName = AdminShellData.StringValue(reader("section")),
+            .Position = AdminShellData.NullableInt(reader("position")),
             .ModifyBy = Convert.ToInt32(reader("modify_by"), CultureInfo.InvariantCulture),
-            .ModifyDt = DbNullableDate(reader("modify_dt")),
+            .ModifyDt = AdminShellData.NullableDate(reader("modify_dt")),
             .CreateBy = Convert.ToInt32(reader("create_by"), CultureInfo.InvariantCulture),
-            .CreateDt = DbNullableDate(reader("create_dt")),
+            .CreateDt = AdminShellData.NullableDate(reader("create_dt")),
             .UpdateNo = Convert.ToInt32(reader("update_no"), CultureInfo.InvariantCulture),
             .Inactive = FlagIsTrue(reader("inactive"))
         }
@@ -767,13 +767,13 @@ Public Class AccessManagerRepository
     Private Shared Function ReadScript(reader As OdbcDataReader) As AccessManagerScript
         Return New AccessManagerScript With {
             .ScriptId = Convert.ToInt32(reader("script_id"), CultureInfo.InvariantCulture),
-            .ScriptTy = DbString(reader("script_ty")),
-            .ScriptName = DbString(reader("script_name")),
-            .Title = DbString(reader("title")),
+            .ScriptTy = AdminShellData.StringValue(reader("script_ty")),
+            .ScriptName = AdminShellData.StringValue(reader("script_name")),
+            .Title = AdminShellData.StringValue(reader("title")),
             .ModifyBy = Convert.ToInt32(reader("modify_by"), CultureInfo.InvariantCulture),
-            .ModifyDt = DbNullableDate(reader("modify_dt")),
+            .ModifyDt = AdminShellData.NullableDate(reader("modify_dt")),
             .CreateBy = Convert.ToInt32(reader("create_by"), CultureInfo.InvariantCulture),
-            .CreateDt = DbNullableDate(reader("create_dt")),
+            .CreateDt = AdminShellData.NullableDate(reader("create_dt")),
             .UpdateNo = Convert.ToInt32(reader("update_no"), CultureInfo.InvariantCulture),
             .Inactive = FlagIsTrue(reader("inactive"))
         }
@@ -783,10 +783,10 @@ Public Class AccessManagerRepository
         Return New AccessManagerSectionItem With {
             .SectionId = Convert.ToInt32(reader("section_id"), CultureInfo.InvariantCulture),
             .ScriptId = Convert.ToInt32(reader("script_id"), CultureInfo.InvariantCulture),
-            .Position = DbNullableInt(reader("position")),
-            .ScriptTy = DbString(reader("script_ty")),
-            .ScriptName = DbString(reader("script_name")),
-            .Title = DbString(reader("title")),
+            .Position = AdminShellData.NullableInt(reader("position")),
+            .ScriptTy = AdminShellData.StringValue(reader("script_ty")),
+            .ScriptName = AdminShellData.StringValue(reader("script_name")),
+            .Title = AdminShellData.StringValue(reader("title")),
             .UpdateNo = Convert.ToInt32(reader("update_no"), CultureInfo.InvariantCulture),
             .ScriptInactive = FlagIsTrue(reader("inactive"))
         }
@@ -795,15 +795,15 @@ Public Class AccessManagerRepository
     Private Shared Function ReadGrant(reader As OdbcDataReader) As AccessManagerGrant
         Return New AccessManagerGrant With {
             .AccessId = Convert.ToInt32(reader("access_id"), CultureInfo.InvariantCulture),
-            .PermissionCd = DbString(reader("permission_cd")),
+            .PermissionCd = AdminShellData.StringValue(reader("permission_cd")),
             .SecureId = Convert.ToInt32(reader("secure_id"), CultureInfo.InvariantCulture),
-            .SecureTy = DbString(reader("secure_ty")),
+            .SecureTy = AdminShellData.StringValue(reader("secure_ty")),
             .UserId = Convert.ToInt32(reader("user_id"), CultureInfo.InvariantCulture),
-            .UserTy = DbString(reader("user_ty")),
+            .UserTy = AdminShellData.StringValue(reader("user_ty")),
             .ModifyBy = Convert.ToInt32(reader("modify_by"), CultureInfo.InvariantCulture),
-            .ModifyDt = DbNullableDate(reader("modify_dt")),
+            .ModifyDt = AdminShellData.NullableDate(reader("modify_dt")),
             .CreateBy = Convert.ToInt32(reader("create_by"), CultureInfo.InvariantCulture),
-            .CreateDt = DbNullableDate(reader("create_dt")),
+            .CreateDt = AdminShellData.NullableDate(reader("create_dt")),
             .UpdateNo = Convert.ToInt32(reader("update_no"), CultureInfo.InvariantCulture),
             .Inactive = FlagIsTrue(reader("inactive"))
         }
@@ -836,7 +836,7 @@ Public Class AccessManagerRepository
         Using command As New OdbcCommand("select section from section where section_id = ?", connection)
             command.Parameters.Add("@section_id", OdbcType.Int).Value = sectionId
             Dim value = command.ExecuteScalar()
-            Return DbString(value)
+            Return AdminShellData.StringValue(value)
         End Using
     End Function
 
@@ -847,8 +847,8 @@ Public Class AccessManagerRepository
                 If Not reader.Read() Then
                     Return String.Empty
                 End If
-                Dim title = DbString(reader("title"))
-                Dim scriptName = DbString(reader("script_name"))
+                Dim title = AdminShellData.StringValue(reader("title"))
+                Dim scriptName = AdminShellData.StringValue(reader("script_name"))
                 If title.Length = 0 Then
                     Return scriptName
                 End If
@@ -935,9 +935,9 @@ Public Class AccessManagerRepository
     End Function
 
     Private Shared Function ReadUserPrincipal(reader As OdbcDataReader) As AccessManagerPrincipal
-        Dim firstName = DbString(reader("first_name"))
-        Dim lastName = DbString(reader("last_name"))
-        Dim userName = DbString(reader("user_name"))
+        Dim firstName = AdminShellData.StringValue(reader("first_name"))
+        Dim lastName = AdminShellData.StringValue(reader("last_name"))
+        Dim userName = AdminShellData.StringValue(reader("user_name"))
         Dim displayName = (lastName & ", " & firstName).Trim(", ".ToCharArray())
         If displayName.Length = 0 Then
             displayName = userName
@@ -958,7 +958,7 @@ Public Class AccessManagerRepository
         Return New AccessManagerPrincipal With {
             .PrincipalTy = AccessManagerConstants.PrincipalTypeGroup,
             .PrincipalId = Convert.ToInt32(reader("group_id"), CultureInfo.InvariantCulture),
-            .DisplayName = DbString(reader("group")),
+            .DisplayName = AdminShellData.StringValue(reader("group")),
             .UserName = String.Empty,
             .Inactive = FlagIsTrue(reader("inactive"))
         }
@@ -1006,7 +1006,7 @@ Public Class AccessManagerRepository
                 While reader.Read()
                     Dim grant = ReadEffectiveGrant(reader, "inherited-section")
                     grant.SectionId = Convert.ToInt32(reader("section_id"), CultureInfo.InvariantCulture)
-                    grant.SectionName = DbString(reader("section"))
+                    grant.SectionName = AdminShellData.StringValue(reader("section"))
                     result.InheritedSectionGrants.Add(grant)
                 End While
             End Using
@@ -1017,9 +1017,9 @@ Public Class AccessManagerRepository
         Return New AccessManagerEffectiveGrant With {
             .AccessId = Convert.ToInt32(reader("access_id"), CultureInfo.InvariantCulture),
             .Source = source,
-            .SecureTy = DbString(reader("secure_ty")),
+            .SecureTy = AdminShellData.StringValue(reader("secure_ty")),
             .SecureId = Convert.ToInt32(reader("secure_id"), CultureInfo.InvariantCulture),
-            .PrincipalTy = DbString(reader("user_ty")),
+            .PrincipalTy = AdminShellData.StringValue(reader("user_ty")),
             .PrincipalId = Convert.ToInt32(reader("user_id"), CultureInfo.InvariantCulture),
             .Inactive = FlagIsTrue(reader("inactive"))
         }
@@ -1118,7 +1118,7 @@ Public Class AccessManagerRepository
         Next
 
         If currentIndex < 0 Then
-            Throw New AccessManagerValidationException("Item was not found in the ordered list.")
+            Throw New AdminShellValidationException("Item was not found in the ordered list.")
         End If
 
         Dim movedId = orderedIds(currentIndex)
@@ -1159,7 +1159,7 @@ Public Class AccessManagerRepository
             command.Parameters.Add("@id", OdbcType.Int).Value = id
             Dim value = command.ExecuteScalar()
             If value Is Nothing OrElse Convert.IsDBNull(value) Then
-                Throw New AccessManagerValidationException(label & " was not found.")
+                Throw New AdminShellValidationException(label & " was not found.")
             End If
         End Using
     End Sub
@@ -1187,32 +1187,11 @@ Public Class AccessManagerRepository
     End Function
 
     Private Shared Sub ThrowConcurrency(entityLabel As String)
-        Throw New AccessManagerConcurrencyException(entityLabel & " was changed by another user.")
+        Throw New AdminShellConcurrencyException(entityLabel & " was changed by another user.")
     End Sub
 
-    Private Shared Function DbString(value As Object) As String
-        If value Is Nothing OrElse Convert.IsDBNull(value) Then
-            Return String.Empty
-        End If
-        Return Convert.ToString(value, CultureInfo.InvariantCulture)
-    End Function
-
-    Private Shared Function DbNullableInt(value As Object) As Integer?
-        If value Is Nothing OrElse Convert.IsDBNull(value) Then
-            Return Nothing
-        End If
-        Return Convert.ToInt32(value, CultureInfo.InvariantCulture)
-    End Function
-
-    Private Shared Function DbNullableDate(value As Object) As DateTime?
-        If value Is Nothing OrElse Convert.IsDBNull(value) Then
-            Return Nothing
-        End If
-        Return Convert.ToDateTime(value, CultureInfo.InvariantCulture)
-    End Function
-
     Private Shared Function FlagIsTrue(value As Object) As Boolean
-        Dim flag = DbString(value)
+        Dim flag = AdminShellData.StringValue(value)
         Return String.Equals(flag, "Y", StringComparison.OrdinalIgnoreCase) OrElse
             String.Equals(flag, "1", StringComparison.OrdinalIgnoreCase) OrElse
             String.Equals(flag, "true", StringComparison.OrdinalIgnoreCase)

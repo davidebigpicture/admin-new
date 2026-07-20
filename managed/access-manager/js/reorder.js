@@ -6,25 +6,6 @@
             return;
         }
 
-        container.addEventListener("click", function (event) {
-            const button = event.target.closest("[data-reorder-direction]");
-            if (!button || button.disabled) {
-                return;
-            }
-            const row = button.closest("[data-reorder-index]");
-            if (!row) {
-                return;
-            }
-            const index = parseInt(row.getAttribute("data-reorder-index"), 10);
-            const direction = parseInt(button.getAttribute("data-reorder-direction"), 10);
-            const orderContainer = row.closest("[data-reorder-count]");
-            const count = parseInt((orderContainer && orderContainer.getAttribute("data-reorder-count")) || "0", 10);
-            const position = global.AccessManagerState.computeReorderPosition(index, direction, count);
-            if (typeof options.onReorder === "function") {
-                options.onReorder(index, position, row);
-            }
-        });
-
         container.addEventListener("keydown", function (event) {
             if (event.key !== "ArrowUp" && event.key !== "ArrowDown") {
                 return;
@@ -126,7 +107,7 @@
         }
     }
 
-    function renderReorderControls(index, count) {
+    function renderReorderControls() {
         const wrapper = document.createElement("span");
         wrapper.className = "reorder-controls";
         wrapper.setAttribute("role", "group");
@@ -134,31 +115,13 @@
 
         const handle = document.createElement("button");
         handle.type = "button";
-        handle.className = "drag-handle";
+        handle.className = "drag-handle admin-action admin-action--quiet admin-action--icon";
         handle.draggable = true;
         handle.innerHTML = "<i class=\"fa fa-bars\" aria-hidden=\"true\"></i>";
         handle.title = "Drag to reorder";
         handle.setAttribute("aria-label", "Drag to reorder");
 
-        const up = document.createElement("button");
-        up.type = "button";
-        up.innerHTML = "<i class=\"fa fa-chevron-up\" aria-hidden=\"true\"></i>";
-        up.title = "Move up";
-        up.setAttribute("aria-label", "Move up");
-        up.setAttribute("data-reorder-direction", "-1");
-        up.disabled = index <= 0;
-
-        const down = document.createElement("button");
-        down.type = "button";
-        down.innerHTML = "<i class=\"fa fa-chevron-down\" aria-hidden=\"true\"></i>";
-        down.title = "Move down";
-        down.setAttribute("aria-label", "Move down");
-        down.setAttribute("data-reorder-direction", "1");
-        down.disabled = index >= count - 1;
-
         wrapper.appendChild(handle);
-        wrapper.appendChild(up);
-        wrapper.appendChild(down);
         return wrapper;
     }
 

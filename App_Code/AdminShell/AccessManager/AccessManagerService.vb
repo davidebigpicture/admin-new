@@ -11,19 +11,19 @@ Public Class AccessManagerService
         user As PilotUser,
         Optional repository As IAccessManagerRepository = Nothing,
         Optional capabilities As AccessManagerCapabilities = Nothing,
-        Optional canOpenApp As Boolean = False)
+        Optional canOpenApp As Boolean? = Nothing)
 
         If user Is Nothing Then
-            Throw New AccessManagerForbiddenException("Authentication is required.")
+            Throw New AdminShellForbiddenException("Authentication is required.")
         End If
 
         _actingMemberId = user.MemberId
         _repository = If(repository, New AccessManagerRepository())
         _capabilities = If(capabilities, AccessManagerCapabilityResolver.Resolve(user.MemberId))
-        _canOpenApp = canOpenApp OrElse AccessManagerAccess.CanOpenApp(user)
+        _canOpenApp = If(canOpenApp.HasValue, canOpenApp.Value, AccessManagerAccess.CanOpenApp(user))
 
         If Not _canOpenApp AndAlso Not _capabilities.CanReadWorkspace() Then
-            Throw New AccessManagerForbiddenException("You do not have permission to use Access Manager.")
+            Throw New AdminShellForbiddenException("You do not have permission to use Access Manager.")
         End If
     End Sub
 
@@ -59,7 +59,7 @@ Public Class AccessManagerService
         EnsureCanManageSections()
         Dim section = _repository.GetSection(sectionId)
         If section Is Nothing Then
-            Throw New AccessManagerValidationException("Section was not found.")
+            Throw New AdminShellValidationException("Section was not found.")
         End If
         Return section
     End Function
@@ -136,7 +136,7 @@ Public Class AccessManagerService
 
         Dim impact = _repository.GetSectionDeleteImpact(command.SectionId)
         If impact.ChildSectionCount > 0 Then
-            Throw New AccessManagerValidationException("Section cannot be deleted while child sections exist.")
+            Throw New AdminShellValidationException("Section cannot be deleted while child sections exist.")
         End If
 
         _repository.HardDeleteSection(command, _actingMemberId)
@@ -153,7 +153,7 @@ Public Class AccessManagerService
         EnsureCanManageScripts()
         Dim script = _repository.GetScript(scriptId)
         If script Is Nothing Then
-            Throw New AccessManagerValidationException("Script was not found.")
+            Throw New AdminShellValidationException("Script was not found.")
         End If
         Return script
     End Function
@@ -299,7 +299,7 @@ Public Class AccessManagerService
         EnsureCanManageGrants()
         AccessManagerValidation.ValidateGrantPrincipal(query.PrincipalTy, query.PrincipalId)
         If query.ScriptId <= 0 Then
-            Throw New AccessManagerValidationException("Script id is required.")
+            Throw New AdminShellValidationException("Script id is required.")
         End If
 
         Dim normalized = New EffectiveAccessQuery With {
@@ -321,43 +321,43 @@ Public Class AccessManagerService
 
     Private Sub EnsureCanReadWorkspace()
         If Not _canOpenApp AndAlso Not _capabilities.CanReadWorkspace() Then
-            Throw New AccessManagerForbiddenException("You do not have permission to use Access Manager.")
+            Throw New AdminShellForbiddenException("You do not have permission to use Access Manager.")
         End If
     End Sub
 
     Private Sub EnsureCanManageSections()
         If Not _capabilities.CanManageSections Then
-            Throw New AccessManagerForbiddenException("You do not have permission to manage sections.")
+            Throw New AdminShellForbiddenException("You do not have permission to manage sections.")
         End If
     End Sub
 
     Private Sub EnsureCanManageScripts()
         If Not _capabilities.CanManageScripts Then
-            Throw New AccessManagerForbiddenException("You do not have permission to manage scripts.")
+            Throw New AdminShellForbiddenException("You do not have permission to manage scripts.")
         End If
     End Sub
 
     Private Sub EnsureCanManageMemberships()
         If Not _capabilities.CanManageMemberships Then
-            Throw New AccessManagerForbiddenException("You do not have permission to manage section memberships.")
+            Throw New AdminShellForbiddenException("You do not have permission to manage section memberships.")
         End If
     End Sub
 
     Private Sub EnsureCanManageGrants()
         If Not _capabilities.CanManageGrants Then
-            Throw New AccessManagerForbiddenException("You do not have permission to manage grants.")
+            Throw New AdminShellForbiddenException("You do not have permission to manage grants.")
         End If
     End Sub
 
     Private Sub EnsureSectionExists(sectionId As Integer)
         If _repository.GetSection(sectionId) Is Nothing Then
-            Throw New AccessManagerValidationException("Section was not found.")
+            Throw New AdminShellValidationException("Section was not found.")
         End If
     End Sub
 
     Private Sub EnsureScriptExists(scriptId As Integer)
         If _repository.GetScript(scriptId) Is Nothing Then
-            Throw New AccessManagerValidationException("Script was not found.")
+            Throw New AdminShellValidationException("Script was not found.")
         End If
     End Sub
 
@@ -372,7 +372,7 @@ Public Class AccessManagerService
     Private Sub EnsurePrincipalExists(principalTy As String, principalId As Integer)
         Dim principal = _repository.GetPrincipal(principalTy.ToUpperInvariant(), principalId)
         If principal Is Nothing Then
-            Throw New AccessManagerValidationException("Principal was not found.")
+            Throw New AdminShellValidationException("Principal was not found.")
         End If
     End Sub
 

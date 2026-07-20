@@ -461,8 +461,8 @@ edit `A:\GLOBAL_6-next\admin`.
 3. Copy exactly the changed UI files to
    `A:\wvbps\www\html\dev\adminshell\managed\code-admin\` (or the matching
    `managed\shared\` mapped deployment directory for shared assets).
-4. Copy changed shared VB.NET Code Admin files, when applicable, to
-   `A:\wvbps\www\html\App_Code\AdminShell\`.
+4. Copy changed Code Admin VB.NET files, when applicable, to
+    `A:\wvbps\www\html\App_Code\AdminShell\CodeAdmin\`.
 5. Hash-compare the repository and deployed copies, then reload and browser-test
    the remote development page. App_Code changes require the deployed ASP.NET
    application to recompile/recycle as appropriate.

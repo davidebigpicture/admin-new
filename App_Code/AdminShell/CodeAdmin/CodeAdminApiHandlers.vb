@@ -71,7 +71,6 @@ Public Class CodeAdminSessionHandler
         End Get
     End Property
 End Class
-
 Public Class CodeAdminWorkspaceHandler
     Implements IHttpHandler
     Implements IRequiresSessionState
@@ -246,7 +245,7 @@ Public Class CodeAdminValuesHandler
                     service.SetPosition(body)
                     PilotJsonApi.WriteJson(context, 200, New Dictionary(Of String, Object) From {{"updated", True}})
                 Case Else
-                    Throw New AccessManagerValidationException("Action is not supported.")
+                    Throw New AdminShellValidationException("Action is not supported.")
             End Select
         Catch ex As Exception
             PilotJsonApi.HandleServiceException(context, ex)
@@ -310,27 +309,9 @@ Public Class CodeAdminValuesHandler
             {"isProtected", value.IsProtected}
         }
         If value.FieldMetadata IsNot Nothing Then
-            result("fieldMetadata") = SerializeValueDetailMetadata(value.FieldMetadata)
+            result("fieldMetadata") = CodeAdminWorkspaceHandler.SerializeDetailMetadata(value.FieldMetadata)
         End If
         Return result
-    End Function
-
-    Private Shared Function SerializeValueDetailMetadata(metadata As CodeAdminDetailMetadata) As Dictionary(Of String, Object)
-        Dim fields As New List(Of Dictionary(Of String, Object))()
-        Dim fieldIndex As Integer
-        For fieldIndex = 0 To metadata.Fields.Count - 1
-            Dim field = metadata.Fields(fieldIndex)
-            Dim options As New List(Of Dictionary(Of String, Object))()
-            Dim optionIndex As Integer
-            For optionIndex = 0 To field.Options.Count - 1
-                options.Add(New Dictionary(Of String, Object) From { {"value", field.Options(optionIndex).Value}, {"label", field.Options(optionIndex).Label} })
-            Next
-            fields.Add(New Dictionary(Of String, Object) From {
-                {"key", field.Key}, {"label", field.Label}, {"controlType", field.ControlType},
-                {"required", field.Required}, {"options", options}, {"section", field.Section}, {"order", field.Order}
-            })
-        Next
-        Return New Dictionary(Of String, Object) From { {"fields", fields} }
     End Function
 
     Private Shared Function SerializeDeleteResults(results As IList(Of CodeAdminDeleteResult)) As Dictionary(Of String, Object)

@@ -21,25 +21,28 @@
         dialog.className = "dialog";
         dialog.setAttribute("role", "dialog");
         dialog.setAttribute("aria-modal", "true");
-        dialog.setAttribute("aria-labelledby", "pilot-dialog-title");
+        dialog.setAttribute("aria-labelledby", "admin-shell-dialog-title");
 
         const title = document.createElement("h2");
-        title.id = "pilot-dialog-title";
+        title.id = "admin-shell-dialog-title";
         title.textContent = options.title || "Confirm";
 
         const message = document.createElement("p");
         message.textContent = options.message || "";
 
         const actions = document.createElement("div");
-        actions.className = "dialog-actions";
+        actions.className = "dialog-actions admin-actions admin-actions--end";
 
         const cancelButton = document.createElement("button");
         cancelButton.type = "button";
+        cancelButton.className = "admin-action admin-action--secondary";
         cancelButton.textContent = options.cancelLabel || "Cancel";
 
         const confirmButton = document.createElement("button");
         confirmButton.type = "button";
-        confirmButton.className = options.danger ? "danger" : "primary";
+        confirmButton.className = options.danger
+            ? "admin-action admin-action--danger"
+            : "admin-action admin-action--primary";
         confirmButton.textContent = options.confirmLabel || "OK";
 
         actions.appendChild(cancelButton);
@@ -51,10 +54,10 @@
             const field = document.createElement("div");
             field.className = "field";
             const label = document.createElement("label");
-            label.setAttribute("for", "pilot-dialog-input");
+            label.setAttribute("for", "admin-shell-dialog-input");
             label.textContent = options.promptLabel;
             const input = document.createElement("input");
-            input.id = "pilot-dialog-input";
+            input.id = "admin-shell-dialog-input";
             input.type = "text";
             input.value = options.defaultValue || "";
             field.appendChild(label);
@@ -79,7 +82,7 @@
         });
         confirmButton.addEventListener("click", function () {
             if (options.promptLabel) {
-                const input = dialog.querySelector("#pilot-dialog-input");
+                const input = dialog.querySelector("#admin-shell-dialog-input");
                 resolve(input ? input.value : "");
                 return;
             }
@@ -99,7 +102,7 @@
             }
         });
 
-        const focusTarget = dialog.querySelector("#pilot-dialog-input") || confirmButton;
+        const focusTarget = dialog.querySelector("#admin-shell-dialog-input") || confirmButton;
         focusTarget.focus();
         if (focusTarget.select) {
             focusTarget.select();
@@ -126,7 +129,7 @@
         });
     }
 
-    global.PilotDialogs = {
+    global.AdminShellDialogs = {
         confirm: confirm,
         prompt: prompt,
         close: closeDialog

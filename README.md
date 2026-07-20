@@ -16,6 +16,8 @@ Plans and status:
 - [`docs/shell-unification-plan.md`](docs/shell-unification-plan.md) — unify
   Access Manager and Classic ASP chrome (next wave).
 - [`docs/github-repo.md`](docs/github-repo.md) — GitHub repo layout and deploy notes.
+- [`docs/source-first-deployment-workflow.md`](docs/source-first-deployment-workflow.md) — source-first validation, deployment, rollback, and commit workflow.
+- [`docs/aspnet-web-site-vb48-workflow.md`](docs/aspnet-web-site-vb48-workflow.md) — reusable staff guide for source-deployed ASP.NET Web Sites using VB.NET and .NET Framework 4.8.
 - [`AGENTS.md`](AGENTS.md) — short index for coding agents.
 
 ## IIS layout (example deployment)
@@ -24,7 +26,7 @@ Values below are **one client's dev setup** (see `managed/web.config`). Other cl
 
 - Pilot tree lives under the client's front-end IIS app (example: `/dev/adminshell`).
 - Managed endpoints inherit the parent .NET Framework 4.8 configuration.
-- Shared pilot VB classes deploy to the application-root `App_Code/AdminShell/` folder (flat; no nested subfolders).
+- Application-root `App_Code` is the special source-compilation root. Shared admin-shell VB classes deploy under `App_Code/AdminShell/`; Code Admin-specific classes deploy under `App_Code/AdminShell/CodeAdmin/`. Under the current default compilation configuration, ordinary same-language nested folders participate in the generated `App_Code` assembly. Explicit `codeSubDirectories` entries would create separate compilation units.
 - `managed\web.config` contains only pilot app settings; it must not contain
   application-level sections such as `authentication`, `compilation`, or
   `sessionState`.
@@ -61,6 +63,12 @@ The shell also renders the user's access-filtered sections and scripts in a
 searchable, collapsible left menu following the legacy navigation hierarchy.
 Perl admin tools remain
 available at their canonical `/admin/admin/cgi-bin/...` paths as rollback.
+
+Its seven production server files are under `App_Code/AdminShell/AccessManager/`:
+`AccessManagerContracts.vb`, `AccessManagerSecurity.vb`,
+`AccessManagerApiHandlers.vb`, `AccessManagerPage.vb`,
+`AccessManagerRepository.vb`, `AccessManagerService.vb`, and
+`AccessManagerValidation.vb`.
 
 Route mappings, nav labels, and the default post-login route are configured in
 `managed/web.config` (`PilotRoutes`, `PilotDefaultRoute`). Unknown routes are

@@ -1,6 +1,7 @@
 Imports System
 Imports System.Collections.Generic
 Imports System.Globalization
+Imports System.Net
 Imports System.Web
 Imports System.Web.SessionState
 
@@ -47,7 +48,6 @@ Public Class AccessManagerSessionHandler
         End Get
     End Property
 End Class
-
 Public Class AccessManagerWorkspaceHandler
     Implements IHttpHandler
     Implements IRequiresSessionState
@@ -247,6 +247,17 @@ Public Class AccessManagerScriptsHandler
                 Return
             End If
 
+            Dim action = If(context.Request.QueryString("action"), String.Empty).Trim().ToLowerInvariant()
+            If action = "checkroute" Then
+                Dim scriptName = If(context.Request.QueryString("scriptName"), String.Empty).Trim()
+                AccessManagerValidation.ValidateScriptName(scriptName)
+                PilotJsonApi.WriteJson(
+                    context,
+                    200,
+                    New Dictionary(Of String, Object) From {{"reachable", IsRouteReachable(context, scriptName)}})
+                Return
+            End If
+
             Dim service As New AccessManagerService(user)
             Dim idValue = context.Request.QueryString("id")
             Dim scriptId As Integer
@@ -277,6 +288,30 @@ Public Class AccessManagerScriptsHandler
             PilotJsonApi.HandleServiceException(context, ex)
         End Try
     End Sub
+
+    Private Shared Function IsRouteReachable(context As HttpContext, scriptName As String) As Boolean
+        Dim routeUri As New Uri(context.Request.Url, scriptName)
+        Dim request = DirectCast(WebRequest.Create(routeUri), HttpWebRequest)
+        request.Method = "HEAD"
+        request.AllowAutoRedirect = False
+        request.Timeout = 5000
+        request.ReadWriteTimeout = 5000
+
+        Try
+            Using response = DirectCast(request.GetResponse(), HttpWebResponse)
+                Return response.StatusCode >= HttpStatusCode.OK AndAlso response.StatusCode < HttpStatusCode.BadRequest
+            End Using
+        Catch ex As WebException
+            Dim response = TryCast(ex.Response, HttpWebResponse)
+            If response Is Nothing Then
+                Return False
+            End If
+
+            Using response
+                Return response.StatusCode >= HttpStatusCode.OK AndAlso response.StatusCode < HttpStatusCode.BadRequest
+            End Using
+        End Try
+    End Function
 
     Private Shared Sub HandlePost(context As HttpContext)
         Try
@@ -409,7 +444,7 @@ Public Class AccessManagerGrantsHandler
                 Dim scriptId As Integer
                 If Not Integer.TryParse(principalIdValue, NumberStyles.None, CultureInfo.InvariantCulture, principalId) OrElse
                     Not Integer.TryParse(scriptIdValue, NumberStyles.None, CultureInfo.InvariantCulture, scriptId) Then
-                    Throw New AccessManagerValidationException("Principal and script ids are required.")
+                    Throw New AdminShellValidationException("Principal and script ids are required.")
                 End If
 
                 PilotJsonApi.WriteJson(
@@ -428,7 +463,7 @@ Public Class AccessManagerGrantsHandler
                 Dim principalIdValue = context.Request.QueryString("principalId")
                 Dim principalId As Integer
                 If Not Integer.TryParse(principalIdValue, NumberStyles.None, CultureInfo.InvariantCulture, principalId) Then
-                    Throw New AccessManagerValidationException("Principal id is required.")
+                    Throw New AdminShellValidationException("Principal id is required.")
                 End If
 
                 Dim includePrincipalInactive = String.Equals(
@@ -446,7 +481,7 @@ Public Class AccessManagerGrantsHandler
             Dim secureIdValue = context.Request.QueryString("secureId")
             Dim secureId As Integer
             If Not Integer.TryParse(secureIdValue, NumberStyles.None, CultureInfo.InvariantCulture, secureId) Then
-                Throw New AccessManagerValidationException("Secure id is required.")
+                Throw New AdminShellValidationException("Secure id is required.")
             End If
 
             Dim includeInactive = String.Equals(

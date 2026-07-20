@@ -26,7 +26,12 @@ const shellJs = fs.readFileSync(path.join(managedRoot, "shared", "shell.js"), "u
 const managedMaster = fs.readFileSync(path.join(managedRoot, "shared", "ManagedShell.master"), "utf8");
 const managedShellMaster = fs.readFileSync(path.join(managedRoot, "..", "App_Code", "AdminShell", "ManagedShellMaster.vb"), "utf8");
 const managedToolPage = fs.readFileSync(path.join(managedRoot, "..", "App_Code", "AdminShell", "ManagedToolPage.vb"), "utf8");
-const accessManagerPage = fs.readFileSync(path.join(managedRoot, "..", "App_Code", "AdminShell", "AccessManagerPage.vb"), "utf8");
+const adminShellApiGuard = fs.readFileSync(path.join(managedRoot, "..", "App_Code", "AdminShell", "AdminShellApiGuard.vb"), "utf8");
+const adminShellData = fs.readFileSync(path.join(managedRoot, "..", "App_Code", "AdminShell", "AdminShellData.vb"), "utf8");
+const adminShellExceptions = fs.readFileSync(path.join(managedRoot, "..", "App_Code", "AdminShell", "AdminShellExceptions.vb"), "utf8");
+const accessManagerSecurity = fs.readFileSync(path.join(managedRoot, "..", "App_Code", "AdminShell", "AccessManager", "AccessManagerSecurity.vb"), "utf8");
+const accessManagerPage = fs.readFileSync(path.join(managedRoot, "..", "App_Code", "AdminShell", "AccessManager", "AccessManagerPage.vb"), "utf8");
+const codeAdminSecurity = fs.readFileSync(path.join(managedRoot, "..", "App_Code", "AdminShell", "CodeAdmin", "CodeAdminSecurity.vb"), "utf8");
 const accessManagerIndex = fs.readFileSync(path.join(managedRoot, "access-manager", "index.aspx"), "utf8");
 const accessManagerApp = fs.readFileSync(path.join(managedRoot, "access-manager", "js", "app.js"), "utf8");
 const codeAdminIndex = fs.readFileSync(path.join(managedRoot, "code-admin", "index.aspx"), "utf8");
@@ -138,6 +143,20 @@ assertTrue(
     "managed tool pages centralize host, authentication, denial, and master metadata while Access Manager uses its API predicate"
 );
 assertTrue(
+    adminShellApiGuard.includes("accessPredicate As Func(Of PilotUser, Boolean)") &&
+        adminShellApiGuard.includes("RequireAuthorizedMutation") &&
+        adminShellData.includes("Public Shared Function StringValue") &&
+        adminShellData.includes("Public Shared Function NullableInt") &&
+        adminShellData.includes("Public Shared Function NullableDate") &&
+        adminShellExceptions.includes("Public Class AdminShellServiceException") &&
+        adminShellExceptions.includes("Public Class AdminShellForbiddenException") &&
+        adminShellExceptions.includes("Public Class AdminShellValidationException") &&
+        adminShellExceptions.includes("Public Class AdminShellConcurrencyException") &&
+        accessManagerSecurity.includes("AdminShellApiGuard.RequireAuthorized") &&
+        codeAdminSecurity.includes("AdminShellApiGuard.RequireAuthorized"),
+    "nested tools share neutral API guard, database conversion, and service exception abstractions through thin adapters"
+);
+assertTrue(
     !fs.existsSync(path.join(managedRoot, "access-manager", "index.html")),
     "obsolete Access Manager index.html entry is removed"
 );
@@ -185,12 +204,12 @@ assertTrue(
     "generated route and menu links prefer directory URLs while retaining URL suffixes"
 );
 assertTrue(
-    /@media \(max-width: 900px\)[\s\S]*?\.admin-menu\s*\{[^}]*max-height:\s*70vh;[^}]*opacity:\s*1;[^}]*transition:\s*max-height[^}]*opacity[^}]*\}[^]*?\.menu-collapsed \.admin-menu\s*\{[^}]*max-height:\s*0;[^}]*overflow:\s*hidden;[^}]*opacity:\s*0;[^}]*\}[^]*?\.menu-collapsed \.admin-menu-content\s*\{[^}]*display:\s*block;[^}]*\}[\s\S]*?\.admin-menu-toggle\s*\{[^}]*display:\s*none;[^}]*\}[\s\S]*?\.admin-menu-mobile-toggle\s*\{[^}]*display:\s*inline-flex;/.test(shellCss),
+    /@media \(max-width: 900px\)[\s\S]*?\.admin-menu\s*\{[^}]*max-height:\s*70vh;[^}]*opacity:\s*1;[^}]*transition:\s*max-height[^}]*opacity[^}]*\}[\s\S]*?\.menu-collapsed \.admin-menu\s*\{[^}]*height:\s*0 !important;[^}]*max-height:\s*0 !important;[^}]*overflow:\s*hidden;[^}]*opacity:\s*0;[^}]*\}[\s\S]*?\.menu-collapsed \.admin-menu-content\s*\{[^}]*display:\s*block;[^}]*\}[\s\S]*?\.admin-menu-toggle\s*\{[^}]*display:\s*none;[^}]*\}[\s\S]*?\.admin-menu-mobile-toggle\s*\{[^}]*display:\s*inline-flex;/.test(shellCss),
     "mobile shell animates the menu while retaining the hamburger and hidden desktop edge control"
 );
 assertTrue(
-    /@media \(max-width: 900px\)[\s\S]*?body\.pilot-classic \.admin-menu\s*\{[^}]*position:\s*static;[^}]*height:\s*auto;[^}]*max-height:\s*70vh;[^}]*\}[\s\S]*?body\.pilot-classic \.menu-collapsed \.admin-menu\s*\{[^}]*height:\s*0 !important;[^}]*max-height:\s*0 !important;/.test(shellCss),
-    "classic pages release the collapsed mobile menu height instead of reserving a viewport-sized gap"
+    /@media \(max-width: 900px\)[\s\S]*?body\.pilot-classic \.admin-menu\s*\{[^}]*position:\s*static;[^}]*height:\s*auto;[^}]*max-height:\s*70vh;[^}]*\}/.test(shellCss),
+    "classic pages retain the expanded mobile menu layout"
 );
 const finalCompactShellStart = shellCss.lastIndexOf("@media (max-width: 760px)");
 const finalCompactShellCss = shellCss.slice(finalCompactShellStart);

@@ -500,7 +500,12 @@ Public NotInheritable Class PilotAccess
         End If
 
         Dim repository As New PilotRepository()
-        Return repository.HasScriptAccess(user.MemberId, canonicalPath)
+        If repository.HasScriptAccess(user.MemberId, canonicalPath) Then
+            Return True
+        End If
+
+        Return Not String.Equals(canonicalPath, pilotPath, StringComparison.OrdinalIgnoreCase) AndAlso
+            repository.HasScriptAccess(user.MemberId, pilotPath)
     End Function
 
     Public Shared Function CanAccessDefault(user As PilotUser) As Boolean

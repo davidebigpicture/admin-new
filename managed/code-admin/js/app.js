@@ -180,7 +180,7 @@
             async function deleteSelected() {
                 const ids = Object.keys(state.selectedIds).map(Number);
                 if (!ids.length) { state.message = "Select at least one code value to delete."; return; }
-                const confirmed = await global.PilotDialogs.confirm({ title: "Delete code values", message: "Delete " + ids.length + " selected code value" + (ids.length === 1 ? "" : "s") + "? Values currently in use will be skipped.", confirmLabel: "Delete", cancelLabel: "Cancel", danger: true });
+                const confirmed = await global.AdminShellDialogs.confirm({ title: "Delete code values", message: "Delete " + ids.length + " selected code value" + (ids.length === 1 ? "" : "s") + "? Values currently in use will be skipped.", confirmLabel: "Delete", cancelLabel: "Cancel", danger: true });
                 if (!confirmed) { return; }
                 const result = await global.PilotApiClient.post("api/values.ashx?action=delete", { codeValueIds: ids });
                 clearSelected(); await loadValues();

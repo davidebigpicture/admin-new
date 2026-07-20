@@ -31,7 +31,7 @@ Module AccessManagerServiceTests
                 .ParentId = 0
             })
             Fail("blank section names are rejected by the service")
-        Catch ex As AccessManagerValidationException
+        Catch ex As AdminShellValidationException
             Pass("blank section names are rejected by the service")
         Catch ex As Exception
             Fail("blank section names are rejected by the service (threw " & ex.GetType().Name & ")")
@@ -43,27 +43,24 @@ Module AccessManagerServiceTests
                                                            caps.CanManageSections = False
                                                            Return caps
                                                        End Function)
-        AssertThrows(Of AccessManagerForbiddenException)(
+        AssertThrows(Of AdminShellForbiddenException)(
             Sub() service.ListSections(False),
             "section list requires section capability")
     End Sub
 
     Private Sub TestServiceRejectsNoCapabilities()
-        Try
-            Dim service = New AccessManagerService(
-                New PilotUser With {
-                    .MemberId = 1001,
-                    .UserName = "tester"
-                },
-                New FakeAccessManagerRepository(),
-                AccessManagerCapabilities.DenyAll(),
-                False)
-            Fail("service rejects users with no access manager permissions")
-        Catch ex As AccessManagerForbiddenException
-            Pass("service rejects users with no access manager permissions")
-        Catch ex As Exception
-            Fail("service rejects users with no access manager permissions (threw " & ex.GetType().Name & ")")
-        End Try
+        Dim user As New PilotUser With {
+            .MemberId = 1001,
+            .UserName = "tester"
+        }
+        Dim repository As New FakeAccessManagerRepository()
+        Dim capabilities = AccessManagerCapabilities.DenyAll()
+
+        AssertThrows(Of AdminShellForbiddenException)(
+            Sub()
+                Dim service = New AccessManagerService(user, repository, capabilities, canOpenApp:=False)
+            End Sub,
+            "service rejects users with no access manager permissions")
     End Sub
 
     Private Sub TestConcurrencyOnSectionUpdate()
@@ -80,7 +77,7 @@ Module AccessManagerServiceTests
         Dim service = CreateService(AllCapabilities(), Nothing, repository)
         repository.ForceConcurrencyOnNextUpdate = True
 
-        AssertThrows(Of AccessManagerConcurrencyException)(
+        AssertThrows(Of AdminShellConcurrencyException)(
             Sub() service.UpdateSection(New UpdateSectionCommand With {
                 .SectionId = 10,
                 .SectionName = "Audit Logs",
@@ -166,7 +163,7 @@ Module AccessManagerServiceTests
         })
 
         Dim service = CreateService(AllCapabilities(), Nothing, repository)
-        AssertThrows(Of AccessManagerValidationException)(
+        AssertThrows(Of AdminShellValidationException)(
             Sub() service.HardDeleteSection(New HardDeleteSectionCommand With {
                 .SectionId = 8,
                 .ExpectedUpdateNo = 1,
@@ -213,7 +210,7 @@ Module AccessManagerServiceTests
         Return New AccessManagerService(New PilotUser With {
             .MemberId = 1001,
             .UserName = "tester"
-        }, repo, caps, True)
+        }, repo, caps, canOpenApp:=True)
     End Function
 
     Private Function AllCapabilities() As AccessManagerCapabilities
@@ -450,7 +447,7 @@ Friend Class FakeAccessManagerRepository
     Public Function UpdateSection(command As UpdateSectionCommand, actingMemberId As Integer) As AccessManagerSection Implements IAccessManagerRepository.UpdateSection
         If ForceConcurrencyOnNextUpdate Then
             ForceConcurrencyOnNextUpdate = False
-            Throw New AccessManagerConcurrencyException("Section was changed by another user.")
+            Throw New AdminShellConcurrencyException("Section was changed by another user.")
         End If
 
         Dim section = GetSection(command.SectionId)

@@ -69,18 +69,18 @@ Public NotInheritable Class PilotJsonApi
 
     Public Shared Function ReadJsonBody(Of T)(context As HttpContext) As T
         If context.Request.ContentLength < 0 OrElse context.Request.ContentLength > MaxRequestBytes Then
-            Throw New AccessManagerValidationException("The request body is not valid.")
+            Throw New AdminShellValidationException("The request body is not valid.")
         End If
 
         Dim contentType = If(context.Request.ContentType, String.Empty)
         If Not contentType.StartsWith("application/json", StringComparison.OrdinalIgnoreCase) Then
-            Throw New AccessManagerValidationException("The request body is not valid.")
+            Throw New AdminShellValidationException("The request body is not valid.")
         End If
 
         Using reader As New StreamReader(context.Request.InputStream, Encoding.UTF8)
             Dim json = reader.ReadToEnd()
             If String.IsNullOrWhiteSpace(json) Then
-                Throw New AccessManagerValidationException("The request body is not valid.")
+                Throw New AdminShellValidationException("The request body is not valid.")
             End If
 
             Dim serializer As New JavaScriptSerializer With {
@@ -127,13 +127,13 @@ Public NotInheritable Class PilotJsonApi
         End If
 
         Select Case True
-            Case TypeOf ex Is AccessManagerValidationException
+            Case TypeOf ex Is AdminShellValidationException
                 WriteError(context, 400, ex.Message, csrfToken)
-            Case TypeOf ex Is AccessManagerForbiddenException
+            Case TypeOf ex Is AdminShellForbiddenException
                 WriteError(context, 403, ex.Message, csrfToken)
-            Case TypeOf ex Is AccessManagerConcurrencyException
+            Case TypeOf ex Is AdminShellConcurrencyException
                 WriteError(context, 409, ex.Message, csrfToken)
-            Case TypeOf ex Is AccessManagerServiceException
+            Case TypeOf ex Is AdminShellServiceException
                 WriteError(context, 400, ex.Message, csrfToken)
             Case Else
                 Dim detail As String = Nothing
@@ -167,10 +167,7 @@ Public NotInheritable Class PilotJsonApi
     End Function
 
     Public Shared Function CanUseAccessManager(user As PilotUser) As Boolean
-        If AccessManagerAccess.CanOpenApp(user) Then
-            Return True
-        End If
-        Return AccessManagerAccess.GetCapabilities(user).CanReadWorkspace()
+        Return AccessManagerAccess.CanUseWorkspace(user)
     End Function
 
     Public Shared Function SerializeCapabilities(caps As AccessManagerCapabilities) As Dictionary(Of String, Object)

@@ -32,13 +32,13 @@ Public Class CodeAdminRepository
         Using connection As New OleDbConnection(_connectionString),
               command As New OleDbCommand(sql, connection)
             connection.Open()
-            Dim majorCode = DbString(command.ExecuteScalar()).Trim()
+            Dim majorCode = AdminShellData.StringValue(command.ExecuteScalar()).Trim()
             If Not String.IsNullOrWhiteSpace(majorCode) Then
                 Return majorCode
             End If
         End Using
 
-        Throw New AccessManagerServiceException("CodeAdminMajorCode is not configured.")
+        Throw New AdminShellServiceException("CodeAdminMajorCode is not configured.")
     End Function
 
     Public Function ListEditableClasses() As IList(Of CodeAdminClass) Implements ICodeAdminRepository.ListEditableClasses
@@ -160,13 +160,13 @@ Public Class CodeAdminRepository
             connection.Open()
             Using reader = command.ExecuteReader()
                 While reader.Read()
-                    Dim columnName = DbString(ReaderValue(reader, "column_desc"))
-                    Dim dataType = DbString(ReaderValue(reader, "data_type"))
-                    Dim fieldType = DbString(ReaderValue(reader, "form_field_type"))
+                    Dim columnName = AdminShellData.StringValue(ReaderValue(reader, "column_desc"))
+                    Dim dataType = AdminShellData.StringValue(ReaderValue(reader, "data_type"))
+                    Dim fieldType = AdminShellData.StringValue(ReaderValue(reader, "form_field_type"))
                     If (Not includeFunctionFields AndAlso (String.Equals(dataType, "FUNCTION", StringComparison.OrdinalIgnoreCase) OrElse String.Equals(fieldType, "FUNCTION", StringComparison.OrdinalIgnoreCase) OrElse String.Equals(columnName, "ORG_RELATE_ID", StringComparison.OrdinalIgnoreCase) OrElse String.Equals(columnName, "ORG_RELATE_ID_2", StringComparison.OrdinalIgnoreCase))) Then
                         Continue While
                     End If
-                    options.Add(New CodeAdminFieldOption With {.Value = columnName, .Label = DbString(ReaderValue(reader, "column_rpt_desc"))})
+                    options.Add(New CodeAdminFieldOption With {.Value = columnName, .Label = AdminShellData.StringValue(ReaderValue(reader, "column_rpt_desc"))})
                 End While
             End Using
         End Using
@@ -186,7 +186,7 @@ Public Class CodeAdminRepository
         Try
             Return ReadLookupOptions(sql, Nothing)
         Catch ex As OleDbException
-            Throw New AccessManagerServiceException("Product lookup is unavailable for this organization.")
+            Throw New AdminShellServiceException("Product lookup is unavailable for this organization.")
         End Try
     End Function
 
@@ -230,15 +230,7 @@ Public Class CodeAdminRepository
         End Using
     End Function
 
-    Public Function CreateValue(command As CreateCodeValueCommand, majorCode As String) As CodeAdminValue Implements ICodeAdminRepository.CreateValue
-        Return CreateValueInternal(command, majorCode, False)
-    End Function
-
-    Public Function CreateLicenseObjTypeValue(command As CreateCodeValueCommand, majorCode As String) As CodeAdminValue Implements ICodeAdminRepository.CreateLicenseObjTypeValue
-        Return CreateValueInternal(command, majorCode, True)
-    End Function
-
-    Private Function CreateValueInternal(command As CreateCodeValueCommand, majorCode As String, rebuildLicenseTables As Boolean) As CodeAdminValue
+    Public Function CreateValue(command As CreateCodeValueCommand, context As CodeAdminMutationContext) As CodeAdminValue Implements ICodeAdminRepository.CreateValue
         Const sql As String =
             "insert into code_value (" &
             "code_class, code_value, code_value_desc, code_value_long_desc, major_code, minor_code, inactive, form_display, " &
@@ -254,12 +246,12 @@ Public Class CodeAdminRepository
             dbCommand.Parameters.Add("@code_value", OleDbType.VarChar, 50).Value = command.CodeValue
             dbCommand.Parameters.Add("@code_value_desc", OleDbType.VarChar, 1000).Value = command.CodeValueDesc
             dbCommand.Parameters.Add("@code_value_long_desc", OleDbType.VarChar, 4000).Value = If(command.CodeValueLongDesc, String.Empty)
-            dbCommand.Parameters.Add("@major_code", OleDbType.VarChar, 50).Value = majorCode
+            dbCommand.Parameters.Add("@major_code", OleDbType.VarChar, 50).Value = context.MajorCode
             dbCommand.Parameters.Add("@minor_code", OleDbType.VarChar, 50).Value = If(command.MinorCode, String.Empty)
-            AddDetailParameters(dbCommand, command.FormDisplay, GetOptionValues(command))
+            AddDetailParameters(dbCommand, command.FormDisplay, command.GetOptionValues())
             dbCommand.ExecuteNonQuery()
-            If rebuildLicenseTables Then
-                RebuildLicenseObjTypeTables(connection, transaction, majorCode)
+            If context.RebuildLicenseObjTypeTables Then
+                RebuildLicenseObjTypeTables(connection, transaction, context.MajorCode)
             End If
             transaction.Commit()
             End Using
@@ -268,15 +260,7 @@ Public Class CodeAdminRepository
         Return GetValueByClassAndValue(command.CodeClass, command.CodeValue)
     End Function
 
-    Public Function UpdateValue(command As UpdateCodeValueCommand) As CodeAdminValue Implements ICodeAdminRepository.UpdateValue
-        Return UpdateValueInternal(command, Nothing, False)
-    End Function
-
-    Public Function UpdateLicenseObjTypeValue(command As UpdateCodeValueCommand, majorCode As String) As CodeAdminValue Implements ICodeAdminRepository.UpdateLicenseObjTypeValue
-        Return UpdateValueInternal(command, majorCode, True)
-    End Function
-
-    Private Function UpdateValueInternal(command As UpdateCodeValueCommand, majorCode As String, rebuildLicenseTables As Boolean) As CodeAdminValue
+    Public Function UpdateValue(command As UpdateCodeValueCommand, context As CodeAdminMutationContext) As CodeAdminValue Implements ICodeAdminRepository.UpdateValue
         Const sql As String =
             "update code_value set code_value_desc = ?, code_value_long_desc = ?, minor_code = ?, form_display = ?, " &
             "option_value_1 = ?, option_value_2 = ?, option_value_3 = ?, option_value_4 = ?, option_value_5 = ?, option_value_6 = ?, " &
@@ -290,16 +274,16 @@ Public Class CodeAdminRepository
             dbCommand.Parameters.Add("@code_value_desc", OleDbType.VarChar, 1000).Value = command.CodeValueDesc
             dbCommand.Parameters.Add("@code_value_long_desc", OleDbType.VarChar, 4000).Value = If(command.CodeValueLongDesc, String.Empty)
             dbCommand.Parameters.Add("@minor_code", OleDbType.VarChar, 50).Value = If(command.MinorCode, String.Empty)
-            AddDetailParameters(dbCommand, command.FormDisplay, GetOptionValues(command))
+            AddDetailParameters(dbCommand, command.FormDisplay, command.GetOptionValues())
             dbCommand.Parameters.Add("@code_value_id", OleDbType.Integer).Value = command.CodeValueId
             dbCommand.Parameters.Add("@code_class", OleDbType.VarChar, 50).Value = command.CodeClass
             dbCommand.Parameters.Add("@code_value", OleDbType.VarChar, 50).Value = command.CodeValue
             Dim affected = dbCommand.ExecuteNonQuery()
             If affected = 0 Then
-                Throw New AccessManagerValidationException("Code value was not found.")
+                Throw New AdminShellValidationException("Code value was not found.")
             End If
-            If rebuildLicenseTables Then
-                RebuildLicenseObjTypeTables(connection, transaction, majorCode)
+            If context.RebuildLicenseObjTypeTables Then
+                RebuildLicenseObjTypeTables(connection, transaction, context.MajorCode)
             End If
             transaction.Commit()
             End Using
@@ -322,7 +306,7 @@ Public Class CodeAdminRepository
             Case "order_by"
                 sql = "update code_value set order_by = ? where code_value_id = ?"
             Case Else
-                Throw New AccessManagerValidationException("Field cannot be updated inline.")
+                Throw New AdminShellValidationException("Field cannot be updated inline.")
         End Select
 
         Using connection As New OleDbConnection(_connectionString),
@@ -336,33 +320,25 @@ Public Class CodeAdminRepository
             connection.Open()
             Dim affected = dbCommand.ExecuteNonQuery()
             If affected = 0 Then
-                Throw New AccessManagerValidationException("Code value was not found.")
+                Throw New AdminShellValidationException("Code value was not found.")
             End If
         End Using
 
         Return GetValueById(command.CodeValueId)
     End Function
 
-    Public Function DeleteValue(codeValueId As Integer) As CodeAdminDeleteResult Implements ICodeAdminRepository.DeleteValue
-        Return DeleteValueInternal(codeValueId, Nothing, False)
-    End Function
-
-    Public Function DeleteLicenseObjTypeValue(codeValueId As Integer, majorCode As String) As CodeAdminDeleteResult Implements ICodeAdminRepository.DeleteLicenseObjTypeValue
-        Return DeleteValueInternal(codeValueId, majorCode, True)
-    End Function
-
-    Private Function DeleteValueInternal(codeValueId As Integer, majorCode As String, rebuildLicenseTables As Boolean) As CodeAdminDeleteResult
+    Public Function DeleteValue(codeValueId As Integer, context As CodeAdminMutationContext) As CodeAdminDeleteResult Implements ICodeAdminRepository.DeleteValue
         Dim existing = GetValueById(codeValueId)
         If existing Is Nothing Then
-            Throw New AccessManagerValidationException("Code value was not found.")
+            Throw New AdminShellValidationException("Code value was not found.")
         End If
 
         If CodeAdminValidation.ValueIsProtected(existing.CodeValue) Then
-            Throw New AccessManagerForbiddenException("This code value cannot be deleted.")
+            Throw New AdminShellForbiddenException("This code value cannot be deleted.")
         End If
 
         If Not CodeAdminValidation.ClassAllowsDelete(existing.CodeClass) Then
-            Throw New AccessManagerForbiddenException("This code class cannot be deleted.")
+            Throw New AdminShellForbiddenException("This code class cannot be deleted.")
         End If
 
         If IsValueInUse(existing) Then
@@ -380,10 +356,10 @@ Public Class CodeAdminRepository
                 command.Parameters.Add("@code_value_id", OleDbType.Integer).Value = codeValueId
                 Dim affected = command.ExecuteNonQuery()
                 If affected = 0 Then
-                    Throw New AccessManagerValidationException("Code value was not found.")
+                    Throw New AdminShellValidationException("Code value was not found.")
                 End If
-                If rebuildLicenseTables Then
-                    RebuildLicenseObjTypeTables(connection, transaction, majorCode)
+                If context.RebuildLicenseObjTypeTables Then
+                    RebuildLicenseObjTypeTables(connection, transaction, context.MajorCode)
                 End If
                 transaction.Commit()
             End Using
@@ -413,7 +389,7 @@ Public Class CodeAdminRepository
                 command.Parameters.Add("@code_value", OleDbType.VarChar, 50).Value = codeValue
                 Dim affected = command.ExecuteNonQuery()
                 If affected = 0 Then
-                    Throw New AccessManagerValidationException("Code value was not found.")
+                    Throw New AdminShellValidationException("Code value was not found.")
                 End If
                 If activeValues IsNot Nothing Then
                     If activeValues.FindIndex(Function(item) String.Equals(item, codeValue, StringComparison.OrdinalIgnoreCase)) < 0 Then
@@ -488,7 +464,7 @@ Public Class CodeAdminRepository
             command.Parameters.Add("@code_class", OleDbType.VarChar, 50).Value = codeClass
             Using reader = command.ExecuteReader()
                 While reader.Read()
-                    results.Add(DbString(ReaderValue(reader, "code_value")))
+                    results.Add(AdminShellData.StringValue(ReaderValue(reader, "code_value")))
                 End While
             End Using
         End Using
@@ -508,8 +484,8 @@ Public Class CodeAdminRepository
             Using reader = command.ExecuteReader()
                 While reader.Read()
                     results.Add(New CodeAdminFieldOption With {
-                        .Value = DbString(reader.GetValue(0)),
-                        .Label = DbString(reader.GetValue(1))
+                        .Value = AdminShellData.StringValue(reader.GetValue(0)),
+                        .Label = AdminShellData.StringValue(reader.GetValue(1))
                     })
                 End While
             End Using
@@ -532,9 +508,9 @@ Public Class CodeAdminRepository
             Using reader = selectValues.ExecuteReader()
                 While reader.Read()
                     values.Add(New CodeAdminValue With {
-                        .CodeValue = DbString(reader.GetValue(0)),
-                        .OptionValue1 = DbString(reader.GetValue(1)),
-                        .OptionValue2 = DbString(reader.GetValue(2))
+                        .CodeValue = AdminShellData.StringValue(reader.GetValue(0)),
+                        .OptionValue1 = AdminShellData.StringValue(reader.GetValue(1)),
+                        .OptionValue2 = AdminShellData.StringValue(reader.GetValue(2))
                     })
                 End While
             End Using
@@ -628,8 +604,8 @@ Public Class CodeAdminRepository
             Using reader = command.ExecuteReader()
                 While reader.Read()
                     results.Add(New CodeAdminReferenceColumn With {
-                        .ColumnType = DbString(ReaderValue(reader, "column_type")),
-                        .ColumnDesc = DbString(ReaderValue(reader, "column_desc"))
+                        .ColumnType = AdminShellData.StringValue(ReaderValue(reader, "column_type")),
+                        .ColumnDesc = AdminShellData.StringValue(ReaderValue(reader, "column_desc"))
                     })
                 End While
             End Using
@@ -663,46 +639,46 @@ Public Class CodeAdminRepository
 
     Private Shared Function ReadClass(reader As IDataRecord, editColumnSupported As Boolean) As CodeAdminClass
         Dim isEditable = Not editColumnSupported OrElse
-            String.Equals(DbString(ReaderValue(reader, "edit")), "Y", StringComparison.OrdinalIgnoreCase)
+            String.Equals(AdminShellData.StringValue(ReaderValue(reader, "edit")), "Y", StringComparison.OrdinalIgnoreCase)
         Return New CodeAdminClass With {
-            .CodeClass = DbString(ReaderValue(reader, "code_class")),
-            .CodeClassDesc = DbString(ReaderValue(reader, "code_class_desc")),
+            .CodeClass = AdminShellData.StringValue(ReaderValue(reader, "code_class")),
+            .CodeClassDesc = AdminShellData.StringValue(ReaderValue(reader, "code_class_desc")),
             .Edit = isEditable
         }
     End Function
 
     Private Shared Function ReadValue(reader As IDataRecord) As CodeAdminValue
-        Dim codeValue = DbString(ReaderValue(reader, "code_value"))
-        Dim status = DbString(ReaderValue(reader, "inactive")).Trim().ToUpperInvariant()
+        Dim codeValue = AdminShellData.StringValue(ReaderValue(reader, "code_value"))
+        Dim status = AdminShellData.StringValue(ReaderValue(reader, "inactive")).Trim().ToUpperInvariant()
         Return New CodeAdminValue With {
             .CodeValueId = Convert.ToInt32(ReaderValue(reader, "code_value_id"), CultureInfo.InvariantCulture),
-            .CodeClass = DbString(ReaderValue(reader, "code_class")),
+            .CodeClass = AdminShellData.StringValue(ReaderValue(reader, "code_class")),
             .CodeValue = codeValue,
-            .CodeValueDesc = DbString(ReaderValue(reader, "code_value_desc")),
-            .CodeValueLongDesc = DbString(ReaderValue(reader, "code_value_long_desc")),
+            .CodeValueDesc = AdminShellData.StringValue(ReaderValue(reader, "code_value_desc")),
+            .CodeValueLongDesc = AdminShellData.StringValue(ReaderValue(reader, "code_value_long_desc")),
             .Status = status,
             .Inactive = Not String.Equals(status, CodeAdminConstants.StatusActive, StringComparison.OrdinalIgnoreCase),
-            .MajorCode = DbString(ReaderValue(reader, "major_code")),
-            .MinorCode = DbString(ReaderValue(reader, "minor_code")),
-            .OrderBy = DbNullableInt(ReaderValue(reader, "order_by")),
-            .FormDisplay = DbString(ReaderValue(reader, "form_display")),
-            .OptionValue1 = DbString(ReaderValue(reader, "option_value_1")),
-            .OptionValue2 = DbString(ReaderValue(reader, "option_value_2")),
-            .OptionValue3 = DbString(ReaderValue(reader, "option_value_3")),
-            .OptionValue4 = DbString(ReaderValue(reader, "option_value_4")),
-            .OptionValue5 = DbString(ReaderValue(reader, "option_value_5")),
-            .OptionValue6 = DbString(ReaderValue(reader, "option_value_6")),
-            .OptionValue7 = DbString(ReaderValue(reader, "option_value_7")),
-            .OptionValue8 = DbString(ReaderValue(reader, "option_value_8")),
-            .OptionValue9 = DbString(ReaderValue(reader, "option_value_9")),
-            .OptionValue10 = DbString(ReaderValue(reader, "option_value_10")),
-            .OptionValue11 = DbString(ReaderValue(reader, "option_value_11")),
-            .OptionValue12 = DbString(ReaderValue(reader, "option_value_12")),
-            .OptionValue13 = DbString(ReaderValue(reader, "option_value_13")),
-            .OptionValue14 = DbString(ReaderValue(reader, "option_value_14")),
-            .OptionValue15 = DbString(ReaderValue(reader, "option_value_15")),
-            .OptionValue16 = DbString(ReaderValue(reader, "option_value_16")),
-            .OptionValue17 = DbString(ReaderValue(reader, "option_value_17")),
+            .MajorCode = AdminShellData.StringValue(ReaderValue(reader, "major_code")),
+            .MinorCode = AdminShellData.StringValue(ReaderValue(reader, "minor_code")),
+            .OrderBy = AdminShellData.NullableInt(ReaderValue(reader, "order_by")),
+            .FormDisplay = AdminShellData.StringValue(ReaderValue(reader, "form_display")),
+            .OptionValue1 = AdminShellData.StringValue(ReaderValue(reader, "option_value_1")),
+            .OptionValue2 = AdminShellData.StringValue(ReaderValue(reader, "option_value_2")),
+            .OptionValue3 = AdminShellData.StringValue(ReaderValue(reader, "option_value_3")),
+            .OptionValue4 = AdminShellData.StringValue(ReaderValue(reader, "option_value_4")),
+            .OptionValue5 = AdminShellData.StringValue(ReaderValue(reader, "option_value_5")),
+            .OptionValue6 = AdminShellData.StringValue(ReaderValue(reader, "option_value_6")),
+            .OptionValue7 = AdminShellData.StringValue(ReaderValue(reader, "option_value_7")),
+            .OptionValue8 = AdminShellData.StringValue(ReaderValue(reader, "option_value_8")),
+            .OptionValue9 = AdminShellData.StringValue(ReaderValue(reader, "option_value_9")),
+            .OptionValue10 = AdminShellData.StringValue(ReaderValue(reader, "option_value_10")),
+            .OptionValue11 = AdminShellData.StringValue(ReaderValue(reader, "option_value_11")),
+            .OptionValue12 = AdminShellData.StringValue(ReaderValue(reader, "option_value_12")),
+            .OptionValue13 = AdminShellData.StringValue(ReaderValue(reader, "option_value_13")),
+            .OptionValue14 = AdminShellData.StringValue(ReaderValue(reader, "option_value_14")),
+            .OptionValue15 = AdminShellData.StringValue(ReaderValue(reader, "option_value_15")),
+            .OptionValue16 = AdminShellData.StringValue(ReaderValue(reader, "option_value_16")),
+            .OptionValue17 = AdminShellData.StringValue(ReaderValue(reader, "option_value_17")),
             .IsProtected = CodeAdminValidation.ValueIsProtected(codeValue)
         }
     End Function
@@ -714,14 +690,6 @@ Public Class CodeAdminRepository
             command.Parameters.Add("@option_value_" & (optionIndex + 1).ToString(CultureInfo.InvariantCulture), OleDbType.VarChar, CodeAdminConstants.MaxOptionalValueLength).Value = DbParameterValue(optionValues(optionIndex))
         Next
     End Sub
-
-    Private Shared Function GetOptionValues(command As CreateCodeValueCommand) As IList(Of String)
-        Return New String() {command.OptionValue1, command.OptionValue2, command.OptionValue3, command.OptionValue4, command.OptionValue5, command.OptionValue6, command.OptionValue7, command.OptionValue8, command.OptionValue9, command.OptionValue10, command.OptionValue11, command.OptionValue12, command.OptionValue13, command.OptionValue14, command.OptionValue15, command.OptionValue16, command.OptionValue17}
-    End Function
-
-    Private Shared Function GetOptionValues(command As UpdateCodeValueCommand) As IList(Of String)
-        Return New String() {command.OptionValue1, command.OptionValue2, command.OptionValue3, command.OptionValue4, command.OptionValue5, command.OptionValue6, command.OptionValue7, command.OptionValue8, command.OptionValue9, command.OptionValue10, command.OptionValue11, command.OptionValue12, command.OptionValue13, command.OptionValue14, command.OptionValue15, command.OptionValue16, command.OptionValue17}
-    End Function
 
     Private Shared Function DbParameterValue(value As String) As Object
         Return If(value Is Nothing, CType(DBNull.Value, Object), value)
@@ -735,20 +703,6 @@ Public Class CodeAdminRepository
             End If
         Next
         Throw New InvalidOperationException("Column not found: " & columnName)
-    End Function
-
-    Private Shared Function DbString(value As Object) As String
-        If value Is Nothing OrElse Convert.IsDBNull(value) Then
-            Return String.Empty
-        End If
-        Return Convert.ToString(value, CultureInfo.InvariantCulture)
-    End Function
-
-    Private Shared Function DbNullableInt(value As Object) As Integer?
-        If value Is Nothing OrElse Convert.IsDBNull(value) Then
-            Return Nothing
-        End If
-        Return Convert.ToInt32(value, CultureInfo.InvariantCulture)
     End Function
 
     Private Class CodeAdminReferenceColumn

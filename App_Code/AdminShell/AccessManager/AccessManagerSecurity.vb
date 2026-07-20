@@ -1,6 +1,44 @@
 Imports System
 Imports System.Configuration
+Imports System.Web
 
+Public NotInheritable Class AccessManagerAccess
+    Private Const AccessManagerRoute As String = "managed/access-manager/index.aspx"
+
+    Private Sub New()
+    End Sub
+
+    Public Shared Function CanOpenApp(user As PilotUser) As Boolean
+        Return PilotAccess.CanAccess(user, PilotConfig.CombinePilot(AccessManagerRoute))
+    End Function
+
+    Public Shared Function CanUseWorkspace(user As PilotUser) As Boolean
+        Return CanOpenApp(user) OrElse GetCapabilities(user).CanReadWorkspace()
+    End Function
+
+    Public Shared Function GetCapabilities(user As PilotUser) As AccessManagerCapabilities
+        If user Is Nothing Then
+            Return AccessManagerCapabilities.DenyAll()
+        End If
+        Return AccessManagerCapabilityResolver.Resolve(user.MemberId)
+    End Function
+
+    Public Shared Function CanManageSections(user As PilotUser) As Boolean
+        Return GetCapabilities(user).CanManageSections
+    End Function
+
+    Public Shared Function CanManageScripts(user As PilotUser) As Boolean
+        Return GetCapabilities(user).CanManageScripts
+    End Function
+
+    Public Shared Function CanManageMemberships(user As PilotUser) As Boolean
+        Return GetCapabilities(user).CanManageMemberships
+    End Function
+
+    Public Shared Function CanManageGrants(user As PilotUser) As Boolean
+        Return GetCapabilities(user).CanManageGrants
+    End Function
+End Class
 Public NotInheritable Class AccessManagerCapabilityResolver
     Private Sub New()
     End Sub
@@ -50,5 +88,20 @@ Public NotInheritable Class AccessManagerCapabilityResolver
             Return False
         End If
         Return repository.HasScriptAccess(memberId, canonicalPath)
+    End Function
+End Class
+
+Public NotInheritable Class AccessManagerApiGuard
+    Private Const AccessDeniedMessage As String = "You do not have permission to use Access Manager."
+
+    Private Sub New()
+    End Sub
+
+    Public Shared Function RequireAuthorized(context As HttpContext, ByRef user As PilotUser) As Boolean
+        Return AdminShellApiGuard.RequireAuthorized(context, AddressOf AccessManagerAccess.CanUseWorkspace, AccessDeniedMessage, user)
+    End Function
+
+    Public Shared Function RequireAuthorizedMutation(context As HttpContext, ByRef user As PilotUser) As Boolean
+        Return AdminShellApiGuard.RequireAuthorizedMutation(context, AddressOf AccessManagerAccess.CanUseWorkspace, AccessDeniedMessage, user)
     End Function
 End Class

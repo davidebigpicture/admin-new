@@ -21,7 +21,7 @@ Module CodeAdminValidationTests
     End Function
 
     Private Sub TestCodeValueValidation()
-        AssertThrows(Of AccessManagerValidationException)(
+        AssertThrows(Of AdminShellValidationException)(
             Sub() CodeAdminValidation.ValidateCodeValue("bad value"),
             "spaces are rejected in code values")
         AssertNoThrow(
@@ -30,7 +30,7 @@ Module CodeAdminValidationTests
     End Sub
 
     Private Sub TestPatchFieldValidation()
-        AssertThrows(Of AccessManagerValidationException)(
+        AssertThrows(Of AdminShellValidationException)(
             Sub() CodeAdminValidation.ValidatePatchField("code_class", "GROUP_TY_CD"),
             "non-patchable fields are rejected")
         AssertNoThrow(
@@ -45,7 +45,7 @@ Module CodeAdminValidationTests
     End Sub
 
     Private Sub TestSqlIdentifierValidation()
-        AssertThrows(Of AccessManagerServiceException)(
+        AssertThrows(Of AdminShellServiceException)(
             Sub() CodeAdminValidation.ValidateSqlIdentifier("bad-column"),
             "hyphenated column names are rejected")
         AssertNoThrow(

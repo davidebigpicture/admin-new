@@ -13,11 +13,13 @@ This file is the operational handoff for the next agent. Read
 - Treat `A:\GLOBAL_6-next\admin` as read-only source material. Never edit it.
 - Make client-local Classic ASP changes only under
   `A:\wvbps\www\html\dev\adminshell`.
-- Put shared pilot VB.NET source flat under
-  `A:\wvbps\www\html\App_Code\AdminShell` using `Pilot*` /
-  `AccessManager*` / `CodeAdmin*` filename prefixes. Do not nest App_Code
-  subfolders under `AdminShell` (ASP.NET compiles them as separate assemblies and
-  breaks cross-references; that shows up as remote 500s on `login.ashx`).
+- Put shared admin-shell VB.NET source under
+  `A:\wvbps\www\html\App_Code\AdminShell` and Code Admin-specific source under
+  `A:\wvbps\www\html\App_Code\AdminShell\CodeAdmin`. Application-root
+  `App_Code` is the special compilation root; under the current default
+  configuration, ordinary same-language nested folders participate in the
+  generated `App_Code` assembly. Explicit `codeSubDirectories` entries create
+  separate compilation units. Do not create `managed\App_Code`.
 - This development machine is a workstation with mapped drives to the web
   server. It is not the IIS host. Do not treat local commands, local process
   state, or local port checks as evidence about the deployed application.
@@ -63,16 +65,17 @@ redirect to `managed/login.html`.)
 
 | Layer | Repo | Deploy |
 |-------|------|--------|
-| APIs + page auth | `App_Code/AdminShell/CodeAdmin*.vb` | `A:\wvbps\www\html\App_Code\AdminShell\` |
+| APIs + page auth | `App_Code/AdminShell/CodeAdmin/CodeAdmin*.vb` | `A:\wvbps\www\html\App_Code\AdminShell\CodeAdmin\` |
 | UI | `managed/code-admin/` | `A:\wvbps\www\html\dev\adminshell\managed\code-admin\` |
 
-Backend files: `CodeAdminModels.vb`, `CodeAdminFieldMetadata.vb`, `CodeAdminValidation.vb`,
-`CodeAdminRepositoryInterface.vb`, `CodeAdminRepository.vb`, `CodeAdminService.vb`,
-`CodeAdminAccess.vb`, `CodeAdminApiGuard.vb`, `CodeAdminApiHandlers.vb` (includes
-`CodeAdminPage`).
+Backend files: `CodeAdminContracts.vb`, `CodeAdminRules.vb`, `CodeAdminSecurity.vb`,
+`CodeAdminApiHandlers.vb` (includes `CodeAdminPage`), `CodeAdminFieldMetadata.vb`,
+`CodeAdminRepository.vb`, and `CodeAdminService.vb`.
 
 UI: `index.aspx`, `code-admin.css`, `js/state.js`, `js/view-model.js`, `js/app.js`,
 `api/session.ashx`, `api/workspace.ashx`, `api/values.ashx`.
+
+Architecture and ownership: [`managed/code-admin/README.md`](../managed/code-admin/README.md).
 
 **Database:** **`ConnectionString`** (Oracle / OraOLEDB — same as Perl `$dbhO` and
 `views.asp`). Implemented with **`System.Data.OleDb`** in `CodeAdminRepository.vb`.
@@ -102,20 +105,23 @@ delete “in use” check validated via `CodeAdminValidation.ValidateSqlIdentifi
 |------|-----|
 | `CodeAdminViewModelTests.js` | `node CodeAdminViewModelTests.js` |
 | `CodeAdminWorkspaceUiTests.js` | `node CodeAdminWorkspaceUiTests.js` |
-| `CodeAdminValidationTests.vb` | Compile with `CodeAdminValidation.vb` + models (see below) |
-| `CodeAdminServiceTests.vb` | Compile with all `AdminShell\CodeAdmin*.vb` + `AccessManagerModels.vb` |
+| `CodeAdminValidationTests.vb` | Compile with `AdminShellExceptions.vb` + `CodeAdmin/CodeAdminRules.vb` (see below) |
+| `CodeAdminServiceTests.vb` | Compile with all seven `AdminShell\CodeAdmin\CodeAdmin*.vb` files |
 | `Test-CodeAdminBrowser.ps1` | Unauthenticated smoke (401 session, page redirect) |
 
-VB compile example (from repo `App_Code/AdminShell`):
+VB compile example (from the repository root):
 
 ```text
 vbc /target:exe /reference:System.Configuration.dll,System.Data.dll
-    CodeAdminValidationTests.vb CodeAdminValidation.vb CodeAdminModels.vb AccessManagerModels.vb
+  managed\App_Data\tests\CodeAdminValidationTests.vb
+  App_Code\AdminShell\AdminShellExceptions.vb
+  App_Code\AdminShell\CodeAdmin\CodeAdminRules.vb
 ```
 
-Service tests need full `AdminShell\*.vb` plus `RedisService.vb` / `RedisSession.vb`
-and `A:\wvbps\www\html\bin\StackExchange.Redis.dll` only if pulling in
-`PilotSecurity.vb` — prefer compiling just Code Admin modules + fakes.
+Service tests compile the seven `App_Code\AdminShell\CodeAdmin\CodeAdmin*.vb`
+modules with their test fakes. A complete `App_Code\AdminShell` library compile
+also needs `RedisService.vb`, `RedisSession.vb`, and
+`A:\wvbps\www\html\bin\StackExchange.Redis.dll`.
 
 **Browser verification:** Use Cursor **`cursor-ide-browser`** MCP when available.
 Protocol: [`.cursor/rules/browser-e2e.mdc`](../.cursor/rules/browser-e2e.mdc).
@@ -177,7 +183,9 @@ links, and no change to the stored desktop collapse preference.
 - Full destructive CRUD against a safe test record.
 
 **Deploy note:** After `App_Code` changes, recycle the WVBPS app pool or touch
-`App_Code\AdminShell` so ASP.NET recompiles. Sync repo → deploy paths above.
+`App_Code\AdminShell` so ASP.NET recompiles. Sync Code Admin files to
+`App_Code\AdminShell\CodeAdmin` and shared admin-shell files to
+`App_Code\AdminShell`.
 
 ## Current deployed shape
 
@@ -197,6 +205,13 @@ Configured tools:
 Access Manager entry:
 
 `https://dev.services.wvbps.wv.gov/dev/adminshell/managed/access-manager/index.html`
+
+**VB.NET:** `App_Code/AdminShell/AccessManager/` contains exactly seven
+tool-specific files: `AccessManagerContracts.vb`, `AccessManagerSecurity.vb`,
+`AccessManagerApiHandlers.vb`, `AccessManagerPage.vb`,
+`AccessManagerRepository.vb`, `AccessManagerService.vb`, and
+`AccessManagerValidation.vb`. Shared guard, data conversion, and service
+exception classes remain directly under `App_Code/AdminShell/`.
 
 Code Admin entry:
 
@@ -366,10 +381,11 @@ prevents a copied URL from bypassing the existing authorization model.
 - `allowDefinition='MachineToApplication'`: an application-level section was
   placed in the child `managed\web.config`; remove it or configure it at the
   true application root.
-- Pilot class not defined / opaque 500 on `login.ashx`: verify VB files are
-  flat under application-root `App_Code\AdminShell` with `Pilot*` /
-  `AccessManager*` / `CodeAdmin*` prefixes (no nested App_Code folders under
-  AdminShell), not under `managed\App_Code`.
+- Managed class not defined / opaque 500 on `login.ashx`: verify shared
+  admin-shell files are under application-root `App_Code\AdminShell`, Code
+  Admin files are under `App_Code\AdminShell\CodeAdmin`, and neither is under
+  `managed\App_Code`. Also verify that no explicit `codeSubDirectories`
+  configuration changed the compilation units.
 - Code Admin empty class list or `Unknown column 'edit'`: repository is on
   wrong connection — must be **`ConnectionString`** (Oracle), not
   `ConnectionStringB` (MySQL).
@@ -400,6 +416,6 @@ copy. To roll back only Access Manager, remove the Access Manager route from
 `PilotRoutes` and delete `managed\access-manager` while keeping Perl tools at
 `/admin/admin/cgi-bin/...`. To roll back only Code Admin, remove its
 `PilotRoutes` entry and delete `managed\code-admin` plus `CodeAdmin*.vb` from
-`App_Code\AdminShell`. To remove the entire pilot, remove `dev\adminshell`
+`App_Code\AdminShell\CodeAdmin`. To remove the entire pilot, remove `dev\adminshell`
 and the `App_Code\AdminShell` tree. Do not change global admin files during
 rollback.

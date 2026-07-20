@@ -91,9 +91,16 @@ After editing the repo, sync to **that client's** mapped paths (examples vary):
 | Artifact | Typical IIS location |
 |----------|----------------------|
 | Pilot ASP + `managed/` | `{client www}/.../adminshell/` (matches `PilotRootPath`) |
-| `App_Code/AdminShell/*.vb` | Application-root `App_Code/AdminShell/` (flat, no subfolders) |
+| Shared admin-shell VB | Application-root `App_Code/AdminShell/` |
+| Code Admin VB | Application-root `App_Code/AdminShell/CodeAdmin/` |
 | `RedisService.vb`, `RedisSession.vb` | Application-root `App_Code/` |
 | `global-bridge/pilot-bridge.asp` | `{GlobalAdminRootPath}/pilot-bridge.asp` on disk (often global admin folder) |
+
+Application-root `App_Code` is the special source-compilation root. With the
+current default compilation configuration, ordinary same-language nested folders
+participate in its generated assembly; explicit `codeSubDirectories` entries
+would create separate compilation units. Do not create `managed/App_Code`:
+only application-root `App_Code` has this behavior.
 
 Global `A:\GLOBAL_6-next\admin` is **read-only** reference. Do not edit except deploying `pilot-bridge.asp` with awareness.
 
@@ -131,7 +138,8 @@ All clients share the **same codebase**; hosts, routes, banners, Redis, and encr
 | Auth | `PilotSecurity.vb` |
 | Legacy bridge | `PilotLegacySession.vb`, `LegacyMembershipCredentialCodec.vb` |
 | Shell | `PilotShell.vb` |
-| Access Manager | `AccessManager*.vb` |
+| Access Manager | `AccessManager/AccessManager*.vb` (seven tool-specific files) |
+| Code Admin | `CodeAdmin/CodeAdmin*.vb` |
 | Redis | `../RedisService.vb`, `../RedisSession.vb` |
 
 ---
@@ -161,7 +169,7 @@ When docs or handoff mention these paths, read them as **this deployment's value
 | Legacy `login.pl` after pilot login | Missing `username` cookie / `web.config.local` key |
 | Pilot login after legacy only | `pilot-bridge.asp` missing or not deployed under global admin |
 | `DENY` | User lacks canonical ACL for route |
-| 500 on `login.ashx` | `App_Code` compile error — flat `AdminShell`, recycle pool |
+| 500 on `login.ashx` | `App_Code` compile error — check application-root source and compilation configuration, then recycle pool |
 | Old blue shell | Stale compile — look for `pilot-shell-unified` in view source |
 
 ---

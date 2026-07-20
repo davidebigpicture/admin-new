@@ -9,12 +9,12 @@ Public Class CodeAdminService
 
     Public Sub New(user As PilotUser, Optional repository As ICodeAdminRepository = Nothing, Optional canOpenApp As Boolean = False)
         If user Is Nothing Then
-            Throw New AccessManagerForbiddenException("Authentication is required.")
+            Throw New AdminShellForbiddenException("Authentication is required.")
         End If
 
         _canOpenApp = canOpenApp OrElse CodeAdminAccess.CanOpenApp(user)
         If Not _canOpenApp Then
-            Throw New AccessManagerForbiddenException("You do not have permission to use Code Admin.")
+            Throw New AdminShellForbiddenException("You do not have permission to use Code Admin.")
         End If
 
         _repository = If(repository, New CodeAdminRepository())
@@ -82,7 +82,7 @@ Public Class CodeAdminService
     Public Function GetValue(codeValueId As Integer) As CodeAdminValue
         Dim value = _repository.GetValueById(codeValueId)
         If value Is Nothing Then
-            Throw New AccessManagerValidationException("Code value was not found.")
+            Throw New AdminShellValidationException("Code value was not found.")
         End If
         EnsureEditableClass(value.CodeClass)
         value.FieldMetadata = HydrateMetadata(CodeAdminFieldMetadataRegistry.Build(RequireMajorCode(), value.CodeClass), value)
@@ -102,45 +102,39 @@ Public Class CodeAdminService
 
     Public Function CreateValue(command As CreateCodeValueCommand) As CodeAdminValue
         ValidateCreateCommand(command)
-        NormalizeLookupCommand(command.CodeClass, GetOptionValues(command), Sub(index, value) SetOptionValue(command, index, value))
+        NormalizeLookupCommand(command.CodeClass, command.GetOptionValues(), Sub(index, value) command.SetOptionValue(index, value))
         EnsureEditableClass(command.CodeClass)
 
         If _repository.ValuePairExists(command.CodeClass, command.CodeValue, Nothing) Then
-            Throw New AccessManagerValidationException("Class and value pair already exist.")
+            Throw New AdminShellValidationException("Class and value pair already exist.")
         End If
 
-        If IsLicenseObjType(command.CodeClass) Then
-            Return _repository.CreateLicenseObjTypeValue(command, RequireMajorCode())
-        End If
-        Return _repository.CreateValue(command, RequireMajorCode())
+        Return _repository.CreateValue(command, BuildMutationContext(command.CodeClass))
     End Function
 
     Public Function UpdateValue(command As UpdateCodeValueCommand) As CodeAdminValue
         ValidateUpdateCommand(command)
-        NormalizeLookupCommand(command.CodeClass, GetOptionValues(command), Sub(index, value) SetOptionValue(command, index, value))
+        NormalizeLookupCommand(command.CodeClass, command.GetOptionValues(), Sub(index, value) command.SetOptionValue(index, value))
         EnsureEditableClass(command.CodeClass)
 
         Dim existing = GetValue(command.CodeValueId)
         If existing.IsProtected Then
-            Throw New AccessManagerForbiddenException("This code value cannot be edited.")
+            Throw New AdminShellForbiddenException("This code value cannot be edited.")
         End If
 
-        If IsLicenseObjType(command.CodeClass) Then
-            Return _repository.UpdateLicenseObjTypeValue(command, RequireMajorCode())
-        End If
-        Return _repository.UpdateValue(command)
+        Return _repository.UpdateValue(command, BuildMutationContext(command.CodeClass))
     End Function
 
     Public Function PatchValue(command As PatchCodeValueCommand) As CodeAdminValue
         If command Is Nothing OrElse command.CodeValueId <= 0 Then
-            Throw New AccessManagerValidationException("Code value id is required.")
+            Throw New AdminShellValidationException("Code value id is required.")
         End If
 
         CodeAdminValidation.ValidatePatchField(command.FieldName, command.FieldValue)
 
         Dim existing = GetValue(command.CodeValueId)
         If existing.IsProtected Then
-            Throw New AccessManagerForbiddenException("This code value cannot be edited.")
+            Throw New AdminShellForbiddenException("This code value cannot be edited.")
         End If
 
         EnsureEditableClass(existing.CodeClass)
@@ -148,7 +142,7 @@ Public Class CodeAdminService
         If String.Equals(command.FieldName, "order_by", StringComparison.OrdinalIgnoreCase) Then
             Dim position = Integer.Parse(command.FieldValue, Globalization.CultureInfo.InvariantCulture)
             If existing.Inactive Then
-                Throw New AccessManagerValidationException("Inactive code values cannot be positioned.")
+                Throw New AdminShellValidationException("Inactive code values cannot be positioned.")
             End If
             _repository.SetPosition(existing.CodeClass, existing.CodeValue, position)
             Return GetValue(command.CodeValueId)
@@ -159,7 +153,7 @@ Public Class CodeAdminService
 
     Public Function DeleteValues(command As DeleteCodeValuesCommand) As IList(Of CodeAdminDeleteResult)
         If command Is Nothing OrElse command.CodeValueIds Is Nothing OrElse command.CodeValueIds.Count = 0 Then
-            Throw New AccessManagerValidationException("Select at least one code value to delete.")
+            Throw New AdminShellValidationException("Select at least one code value to delete.")
         End If
 
         Dim results As New List(Of CodeAdminDeleteResult)()
@@ -169,11 +163,9 @@ Public Class CodeAdminService
             If existing IsNot Nothing Then
                 EnsureEditableClass(existing.CodeClass)
             End If
-            If existing IsNot Nothing AndAlso IsLicenseObjType(existing.CodeClass) Then
-                results.Add(_repository.DeleteLicenseObjTypeValue(command.CodeValueIds(idIndex), RequireMajorCode()))
-            Else
-                results.Add(_repository.DeleteValue(command.CodeValueIds(idIndex)))
-            End If
+            results.Add(_repository.DeleteValue(
+                command.CodeValueIds(idIndex),
+                If(existing Is Nothing, New CodeAdminMutationContext(), BuildMutationContext(existing.CodeClass))))
         Next
         Return results
     End Function
@@ -182,7 +174,7 @@ Public Class CodeAdminService
         ValidateLifecycleCommand(command)
         Dim status = If(command.Status, String.Empty).Trim().ToUpperInvariant()
         If Not CodeAdminConstants.IsLifecycleStatus(status) Then
-            Throw New AccessManagerValidationException("Status must be Active, Inactive, or Archived.")
+            Throw New AdminShellValidationException("Status must be Active, Inactive, or Archived.")
         End If
         EnsureEditableClass(command.CodeClass)
         RequireMutableValue(command.CodeClass, command.CodeValue)
@@ -199,17 +191,17 @@ Public Class CodeAdminService
 
     Public Sub SetPosition(command As CodeValuePositionCommand)
         If command Is Nothing Then
-            Throw New AccessManagerValidationException("Position request is not valid.")
+            Throw New AdminShellValidationException("Position request is not valid.")
         End If
         CodeAdminValidation.ValidateCodeClass(command.CodeClass)
         CodeAdminValidation.ValidateExistingCodeValueReference(command.CodeValue)
         If command.NewPosition < 1 Then
-            Throw New AccessManagerValidationException("Position must be a positive number.")
+            Throw New AdminShellValidationException("Position must be a positive number.")
         End If
         EnsureEditableClass(command.CodeClass)
         Dim existing = RequireMutableValue(command.CodeClass, command.CodeValue)
         If existing.Inactive Then
-            Throw New AccessManagerValidationException("Inactive code values cannot be positioned.")
+            Throw New AdminShellValidationException("Inactive code values cannot be positioned.")
         End If
         _repository.SetPosition(command.CodeClass, command.CodeValue, command.NewPosition)
     End Sub
@@ -217,47 +209,47 @@ Public Class CodeAdminService
     Private Function RequireMutableValue(codeClass As String, codeValue As String) As CodeAdminValue
         Dim existing = _repository.GetValueByClassAndValue(codeClass, codeValue)
         If existing Is Nothing Then
-            Throw New AccessManagerValidationException("Code value was not found.")
+            Throw New AdminShellValidationException("Code value was not found.")
         End If
         If existing.IsProtected Then
-            Throw New AccessManagerForbiddenException("This code value cannot be changed.")
+            Throw New AdminShellForbiddenException("This code value cannot be changed.")
         End If
         Return existing
     End Function
 
     Private Sub ValidateCreateCommand(command As CreateCodeValueCommand)
         If command Is Nothing Then
-            Throw New AccessManagerValidationException("Create request is not valid.")
+            Throw New AdminShellValidationException("Create request is not valid.")
         End If
         CodeAdminValidation.ValidateCodeClass(command.CodeClass)
         CodeAdminValidation.ValidateCodeValue(command.CodeValue)
         CodeAdminValidation.ValidateDescription(command.CodeValueDesc)
         CodeAdminValidation.ValidateLongDescription(command.CodeValueLongDesc)
-        ValidateDetailFields(command.FormDisplay, GetOptionValues(command))
+        ValidateDetailFields(command.FormDisplay, command.GetOptionValues())
         ValidateRequiredDetailFields(command.CodeClass, command.CodeValueLongDesc, command.MinorCode)
-        ValidateLookupFields(command.CodeClass, command.CodeValue, command.MinorCode, GetOptionValues(command), Nothing)
+        ValidateLookupFields(command.CodeClass, command.CodeValue, command.MinorCode, command.GetOptionValues(), Nothing)
     End Sub
 
     Private Sub ValidateUpdateCommand(command As UpdateCodeValueCommand)
         If command Is Nothing OrElse command.CodeValueId <= 0 Then
-            Throw New AccessManagerValidationException("Update request is not valid.")
+            Throw New AdminShellValidationException("Update request is not valid.")
         End If
         CodeAdminValidation.ValidateCodeClass(command.CodeClass)
         CodeAdminValidation.ValidateExistingCodeValueReference(command.CodeValue)
         CodeAdminValidation.ValidateDescription(command.CodeValueDesc)
         CodeAdminValidation.ValidateLongDescription(command.CodeValueLongDesc)
-        ValidateDetailFields(command.FormDisplay, GetOptionValues(command))
+        ValidateDetailFields(command.FormDisplay, command.GetOptionValues())
         ValidateRequiredDetailFields(command.CodeClass, command.CodeValueLongDesc, command.MinorCode)
-        ValidateLookupFields(command.CodeClass, command.CodeValue, command.MinorCode, GetOptionValues(command), GetValue(command.CodeValueId))
+        ValidateLookupFields(command.CodeClass, command.CodeValue, command.MinorCode, command.GetOptionValues(), GetValue(command.CodeValueId))
     End Sub
 
     Private Sub ValidateRequiredDetailFields(codeClass As String, longDescription As String, minorCode As String)
         Dim organizationId = RequireMajorCode()
         If CodeAdminFieldMetadataRegistry.IsRequired(organizationId, codeClass, "codeValueLongDesc") AndAlso String.IsNullOrWhiteSpace(longDescription) Then
-            Throw New AccessManagerValidationException("Path is required.")
+            Throw New AdminShellValidationException("Path is required.")
         End If
         If CodeAdminFieldMetadataRegistry.IsRequired(organizationId, codeClass, "minorCode") AndAlso String.IsNullOrWhiteSpace(minorCode) Then
-            Throw New AccessManagerValidationException("Record Type is required.")
+            Throw New AdminShellValidationException("Record Type is required.")
         End If
     End Sub
 
@@ -271,12 +263,16 @@ Public Class CodeAdminService
 
     Private Shared Sub ValidateOptionalField(value As String, label As String)
         If value IsNot Nothing AndAlso value.Length > CodeAdminConstants.MaxOptionalValueLength Then
-            Throw New AccessManagerValidationException(label & " is too long.")
+            Throw New AdminShellValidationException(label & " is too long.")
         End If
     End Sub
 
-    Private Function IsLicenseObjType(codeClass As String) As Boolean
-        Return String.Equals(RequireMajorCode(), "3900", StringComparison.OrdinalIgnoreCase) AndAlso String.Equals(codeClass, "LicenseObjType", StringComparison.OrdinalIgnoreCase)
+    Private Function BuildMutationContext(codeClass As String) As CodeAdminMutationContext
+        Dim majorCode = RequireMajorCode()
+        Return New CodeAdminMutationContext With {
+            .MajorCode = majorCode,
+            .RebuildLicenseObjTypeTables = String.Equals(majorCode, "3900", StringComparison.OrdinalIgnoreCase) AndAlso String.Equals(codeClass, "LicenseObjType", StringComparison.OrdinalIgnoreCase)
+        }
     End Function
 
     Private Function HydrateMetadata(metadata As CodeAdminDetailMetadata, value As CodeAdminValue) As CodeAdminDetailMetadata
@@ -318,7 +314,7 @@ Public Class CodeAdminService
         If String.Equals(source, "products", StringComparison.OrdinalIgnoreCase) Then
             Return _repository.ListProducts(RequireMajorCode())
         End If
-        Throw New AccessManagerValidationException("Code Admin lookup source is not supported.")
+        Throw New AdminShellValidationException("Code Admin lookup source is not supported.")
     End Function
 
     Private _metadataValue As CodeAdminValue
@@ -383,7 +379,7 @@ Public Class CodeAdminService
         Dim valueIndex As Integer
         For valueIndex = 0 To values.Count - 1
             If Not validValues.Contains(values(valueIndex)) Then
-                Throw New AccessManagerValidationException(field.Label & " contains an invalid selection.")
+                Throw New AdminShellValidationException(field.Label & " contains an invalid selection.")
             End If
         Next
     End Sub
@@ -414,61 +410,9 @@ Public Class CodeAdminService
         Next
     End Sub
 
-    Private Shared Sub SetOptionValue(command As CreateCodeValueCommand, optionIndex As Integer, value As String)
-        Select Case optionIndex
-            Case 1 : command.OptionValue1 = value
-            Case 2 : command.OptionValue2 = value
-            Case 3 : command.OptionValue3 = value
-            Case 4 : command.OptionValue4 = value
-            Case 5 : command.OptionValue5 = value
-            Case 6 : command.OptionValue6 = value
-            Case 7 : command.OptionValue7 = value
-            Case 8 : command.OptionValue8 = value
-            Case 9 : command.OptionValue9 = value
-            Case 10 : command.OptionValue10 = value
-            Case 11 : command.OptionValue11 = value
-            Case 12 : command.OptionValue12 = value
-            Case 13 : command.OptionValue13 = value
-            Case 14 : command.OptionValue14 = value
-            Case 15 : command.OptionValue15 = value
-            Case 16 : command.OptionValue16 = value
-            Case 17 : command.OptionValue17 = value
-        End Select
-    End Sub
-
-    Private Shared Sub SetOptionValue(command As UpdateCodeValueCommand, optionIndex As Integer, value As String)
-        Select Case optionIndex
-            Case 1 : command.OptionValue1 = value
-            Case 2 : command.OptionValue2 = value
-            Case 3 : command.OptionValue3 = value
-            Case 4 : command.OptionValue4 = value
-            Case 5 : command.OptionValue5 = value
-            Case 6 : command.OptionValue6 = value
-            Case 7 : command.OptionValue7 = value
-            Case 8 : command.OptionValue8 = value
-            Case 9 : command.OptionValue9 = value
-            Case 10 : command.OptionValue10 = value
-            Case 11 : command.OptionValue11 = value
-            Case 12 : command.OptionValue12 = value
-            Case 13 : command.OptionValue13 = value
-            Case 14 : command.OptionValue14 = value
-            Case 15 : command.OptionValue15 = value
-            Case 16 : command.OptionValue16 = value
-            Case 17 : command.OptionValue17 = value
-        End Select
-    End Sub
-
-    Private Shared Function GetOptionValues(command As CreateCodeValueCommand) As IList(Of String)
-        Return New String() {command.OptionValue1, command.OptionValue2, command.OptionValue3, command.OptionValue4, command.OptionValue5, command.OptionValue6, command.OptionValue7, command.OptionValue8, command.OptionValue9, command.OptionValue10, command.OptionValue11, command.OptionValue12, command.OptionValue13, command.OptionValue14, command.OptionValue15, command.OptionValue16, command.OptionValue17}
-    End Function
-
-    Private Shared Function GetOptionValues(command As UpdateCodeValueCommand) As IList(Of String)
-        Return New String() {command.OptionValue1, command.OptionValue2, command.OptionValue3, command.OptionValue4, command.OptionValue5, command.OptionValue6, command.OptionValue7, command.OptionValue8, command.OptionValue9, command.OptionValue10, command.OptionValue11, command.OptionValue12, command.OptionValue13, command.OptionValue14, command.OptionValue15, command.OptionValue16, command.OptionValue17}
-    End Function
-
     Private Shared Sub ValidateLifecycleCommand(command As CodeValueLifecycleCommand)
         If command Is Nothing Then
-            Throw New AccessManagerValidationException("Lifecycle request is not valid.")
+            Throw New AdminShellValidationException("Lifecycle request is not valid.")
         End If
         CodeAdminValidation.ValidateCodeClass(command.CodeClass)
         CodeAdminValidation.ValidateExistingCodeValueReference(command.CodeValue)
@@ -477,7 +421,7 @@ Public Class CodeAdminService
     Private Sub EnsureEditableClass(codeClass As String)
         Dim codeClassRow = _repository.GetClass(codeClass)
         If codeClassRow Is Nothing OrElse Not codeClassRow.Edit Then
-            Throw New AccessManagerForbiddenException("This code class cannot be edited.")
+            Throw New AdminShellForbiddenException("This code class cannot be edited.")
         End If
     End Sub
 End Class

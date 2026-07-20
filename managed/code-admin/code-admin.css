@@ -65,14 +65,6 @@
     gap: 0.4rem;
 }
 
-#codeAdminApp .btn-sm,
-#codeAdminApp .btn-group-sm > .btn {
-    min-height: 30px;
-    padding: 5px 10px;
-    font-size: 12px;
-    line-height: 1.5;
-}
-
 #codeAdminApp .code-admin-filters {
     display: flex;
     flex-wrap: wrap;
@@ -317,22 +309,6 @@
     margin-top: 1rem;
 }
 
-#codeAdminApp .code-admin-pager .btn-default:hover,
-#codeAdminApp .code-admin-pager .btn-default:focus {
-    border-color: #94a3b8;
-    background-color: #e2e8f0;
-    color: #1e293b;
-}
-
-#codeAdminApp .code-admin-pager .btn-default.disabled:hover,
-#codeAdminApp .code-admin-pager .btn-default.disabled:focus,
-#codeAdminApp .code-admin-pager .btn-default[disabled]:hover,
-#codeAdminApp .code-admin-pager .btn-default[disabled]:focus {
-    border-color: #cbd5e1;
-    background-color: #f8fafc;
-    color: #64748b;
-}
-
 #codeAdminApp .code-admin-page-status {
     margin: 0;
     color: #475569;
@@ -430,7 +406,6 @@
 
 #codeAdminApp .editor-actions {
     display: flex;
-    gap: 0.5rem;
     margin-top: 0.25rem;
 }
 

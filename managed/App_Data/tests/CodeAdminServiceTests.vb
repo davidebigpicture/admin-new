@@ -15,30 +15,6 @@ Public NotInheritable Class CodeAdminAccess
         Return False
     End Function
 End Class
-
-Public Class AccessManagerServiceException
-    Inherits Exception
-
-    Public Sub New(message As String)
-        MyBase.New(message)
-    End Sub
-End Class
-
-Public Class AccessManagerForbiddenException
-    Inherits AccessManagerServiceException
-
-    Public Sub New(message As String)
-        MyBase.New(message)
-    End Sub
-End Class
-
-Public Class AccessManagerValidationException
-    Inherits AccessManagerServiceException
-
-    Public Sub New(message As String)
-        MyBase.New(message)
-    End Sub
-End Class
 #End If
 
 Module CodeAdminServiceTests
@@ -56,9 +32,10 @@ Module CodeAdminServiceTests
         TestLookupOptionsAreHydratedAndValidateMembership()
         TestCredentialProductsUseResolvedOrganization()
         TestMultiSelectNormalizesToLegacyStorage()
-        TestLicenseObjTypeUsesTransactionalRepositoryPath()
-        TestLicenseObjTypeDeleteUsesTransactionalRepositoryPath()
-        TestOtherDeletesUseGenericRepositoryPath()
+        TestLicenseObjTypeCreateRequestsTransactionalRebuild()
+        TestLicenseObjTypeUpdateRequestsTransactionalRebuild()
+        TestLicenseObjTypeDeleteRequestsTransactionalRebuild()
+        TestOtherMutationsDoNotRequestTransactionalRebuild()
         TestGetValueRejectsNonEditableClass()
         TestProtectedValueCannotBeUpdated()
         TestProtectedValueCannotBePositioned()
@@ -97,7 +74,7 @@ Module CodeAdminServiceTests
         repository.ExistingPairs("WINDOW_SHADE_CD|BLUE") = True
 
         Dim service = CreateService(repository)
-        AssertThrows(Of AccessManagerValidationException)(
+        AssertThrows(Of AdminShellValidationException)(
             Sub() service.CreateValue(New CreateCodeValueCommand With {
                 .CodeClass = "WINDOW_SHADE_CD",
                 .CodeValue = "BLUE",
@@ -140,7 +117,7 @@ Module CodeAdminServiceTests
         })
         Dim service = CreateService(repository)
 
-        AssertThrows(Of AccessManagerValidationException)(
+        AssertThrows(Of AdminShellValidationException)(
             Sub() service.CreateValue(New CreateCodeValueCommand With {
                 .CodeClass = "APP_RENEW_TYPE_CD",
                 .CodeValue = "INITIAL",
@@ -148,7 +125,7 @@ Module CodeAdminServiceTests
             }),
             "APP_RENEW_TYPE_CD create requires Path")
 
-        AssertThrows(Of AccessManagerValidationException)(
+        AssertThrows(Of AdminShellValidationException)(
             Sub() service.CreateValue(New CreateCodeValueCommand With {
                 .CodeClass = "APP_RENEW_TYPE_CD",
                 .CodeValue = "INITIAL",
@@ -200,7 +177,7 @@ Module CodeAdminServiceTests
         Else
             Fail("detail metadata includes server-owned lookup options")
         End If
-        AssertThrows(Of AccessManagerValidationException)(Sub() CreateService(repository).CreateValue(New CreateCodeValueCommand With {.CodeClass = "LIC_TYPE", .CodeValue = "LPN", .CodeValueDesc = "Licensed", .OptionValue2 = "FORGED"}), "lookup fields reject values outside server options")
+        AssertThrows(Of AdminShellValidationException)(Sub() CreateService(repository).CreateValue(New CreateCodeValueCommand With {.CodeClass = "LIC_TYPE", .CodeValue = "LPN", .CodeValueDesc = "Licensed", .OptionValue2 = "FORGED"}), "lookup fields reject values outside server options")
     End Sub
 
     Private Sub TestCredentialProductsUseResolvedOrganization()
@@ -248,31 +225,52 @@ Module CodeAdminServiceTests
         If repository.LastCreated.OptionValue1 = "A, B" Then Pass("multiselect values normalize to legacy comma-space storage") Else Fail("multiselect values normalize to legacy comma-space storage")
     End Sub
 
-    Private Sub TestLicenseObjTypeUsesTransactionalRepositoryPath()
+    Private Sub TestLicenseObjTypeCreateRequestsTransactionalRebuild()
         Dim repository As New FakeCodeAdminRepository()
         repository.Classes.Add(New CodeAdminClass With {.CodeClass = "LicenseObjType", .CodeClassDesc = "License Object", .Edit = True})
         repository.LookupValues("WINDOW_SHADE_CD") = New List(Of CodeAdminFieldOption)()
         repository.LookupValues("GROUP_TY_CD") = New List(Of CodeAdminFieldOption)()
         repository.LookupValues("LicenseGroups") = New List(Of CodeAdminFieldOption)()
         CreateService(repository).CreateValue(New CreateCodeValueCommand With {.CodeClass = "LicenseObjType", .CodeValue = "LIC", .CodeValueDesc = "License"})
-        If repository.CreatedLicenseObjType Then Pass("org 3900 LicenseObjType uses transactional repository path") Else Fail("org 3900 LicenseObjType uses transactional repository path")
+        If repository.LastCreateContext IsNot Nothing AndAlso repository.LastCreateContext.RebuildLicenseObjTypeTables AndAlso repository.LastCreateContext.MajorCode = "3900" Then
+            Pass("org 3900 LicenseObjType create requests a transactional rebuild")
+        Else
+            Fail("org 3900 LicenseObjType create requests a transactional rebuild")
+        End If
     End Sub
 
-    Private Sub TestLicenseObjTypeDeleteUsesTransactionalRepositoryPath()
+    Private Sub TestLicenseObjTypeUpdateRequestsTransactionalRebuild()
+        Dim repository As New FakeCodeAdminRepository()
+        repository.Classes.Add(New CodeAdminClass With {.CodeClass = "LicenseObjType", .CodeClassDesc = "License Object", .Edit = True})
+        repository.Values.Add(New CodeAdminValue With {.CodeValueId = 70, .CodeClass = "LicenseObjType", .CodeValue = "LIC", .CodeValueDesc = "License"})
+        repository.LookupValues("WINDOW_SHADE_CD") = New List(Of CodeAdminFieldOption)()
+        repository.LookupValues("GROUP_TY_CD") = New List(Of CodeAdminFieldOption)()
+        repository.LookupValues("LicenseGroups") = New List(Of CodeAdminFieldOption)()
+
+        CreateService(repository).UpdateValue(New UpdateCodeValueCommand With {.CodeValueId = 70, .CodeClass = "LicenseObjType", .CodeValue = "LIC", .CodeValueDesc = "License"})
+
+        If repository.LastUpdateContext IsNot Nothing AndAlso repository.LastUpdateContext.RebuildLicenseObjTypeTables AndAlso repository.LastUpdateContext.MajorCode = "3900" Then
+            Pass("org 3900 LicenseObjType update requests a transactional rebuild")
+        Else
+            Fail("org 3900 LicenseObjType update requests a transactional rebuild")
+        End If
+    End Sub
+
+    Private Sub TestLicenseObjTypeDeleteRequestsTransactionalRebuild()
         Dim repository As New FakeCodeAdminRepository()
         repository.Classes.Add(New CodeAdminClass With {.CodeClass = "LicenseObjType", .CodeClassDesc = "License Object", .Edit = True})
         repository.Values.Add(New CodeAdminValue With {.CodeValueId = 71, .CodeClass = "LicenseObjType", .CodeValue = "LIC", .CodeValueDesc = "License"})
 
         CreateService(repository).DeleteValues(New DeleteCodeValuesCommand With {.CodeValueIds = New List(Of Integer) From {71}})
 
-        If repository.LicenseObjTypeDeleteCount = 1 AndAlso repository.GenericDeleteCount = 0 Then
-            Pass("org 3900 LicenseObjType delete uses transactional repository path")
+        If repository.DeleteCount = 1 AndAlso repository.LastDeleteContext IsNot Nothing AndAlso repository.LastDeleteContext.RebuildLicenseObjTypeTables AndAlso repository.LastDeleteContext.MajorCode = "3900" Then
+            Pass("org 3900 LicenseObjType delete requests a transactional rebuild")
         Else
-            Fail("org 3900 LicenseObjType delete uses transactional repository path")
+            Fail("org 3900 LicenseObjType delete requests a transactional rebuild")
         End If
     End Sub
 
-    Private Sub TestOtherDeletesUseGenericRepositoryPath()
+    Private Sub TestOtherMutationsDoNotRequestTransactionalRebuild()
         Dim nonLicenseRepository As New FakeCodeAdminRepository()
         nonLicenseRepository.Classes.Add(New CodeAdminClass With {.CodeClass = "WINDOW_SHADE_CD", .CodeClassDesc = "Window Shade", .Edit = True})
         nonLicenseRepository.Values.Add(New CodeAdminValue With {.CodeValueId = 72, .CodeClass = "WINDOW_SHADE_CD", .CodeValue = "OPEN", .CodeValueDesc = "Open"})
@@ -284,11 +282,11 @@ Module CodeAdminServiceTests
         otherOrganizationRepository.Values.Add(New CodeAdminValue With {.CodeValueId = 73, .CodeClass = "LicenseObjType", .CodeValue = "LIC", .CodeValueDesc = "License"})
         CreateService(otherOrganizationRepository).DeleteValues(New DeleteCodeValuesCommand With {.CodeValueIds = New List(Of Integer) From {73}})
 
-        If nonLicenseRepository.GenericDeleteCount = 1 AndAlso nonLicenseRepository.LicenseObjTypeDeleteCount = 0 AndAlso
-           otherOrganizationRepository.GenericDeleteCount = 1 AndAlso otherOrganizationRepository.LicenseObjTypeDeleteCount = 0 Then
-            Pass("non-3900 or non-LicenseObjType deletes use generic repository path")
+        If nonLicenseRepository.DeleteCount = 1 AndAlso nonLicenseRepository.LastDeleteContext IsNot Nothing AndAlso Not nonLicenseRepository.LastDeleteContext.RebuildLicenseObjTypeTables AndAlso
+           otherOrganizationRepository.DeleteCount = 1 AndAlso otherOrganizationRepository.LastDeleteContext IsNot Nothing AndAlso Not otherOrganizationRepository.LastDeleteContext.RebuildLicenseObjTypeTables Then
+            Pass("non-3900 or non-LicenseObjType deletes do not request a transactional rebuild")
         Else
-            Fail("non-3900 or non-LicenseObjType deletes use generic repository path")
+            Fail("non-3900 or non-LicenseObjType deletes do not request a transactional rebuild")
         End If
     End Sub
 
@@ -325,7 +323,7 @@ Module CodeAdminServiceTests
             .CodeValueDesc = "Locked"
         })
 
-        AssertThrows(Of AccessManagerForbiddenException)(
+        AssertThrows(Of AdminShellForbiddenException)(
             Sub() CreateService(repository).GetValue(44),
             "detail reads reject non-editable classes")
     End Sub
@@ -346,7 +344,7 @@ Module CodeAdminServiceTests
         })
 
         Dim service = CreateService(repository)
-        AssertThrows(Of AccessManagerForbiddenException)(
+        AssertThrows(Of AdminShellForbiddenException)(
             Sub() service.UpdateValue(New UpdateCodeValueCommand With {
                 .CodeValueId = 1,
                 .CodeClass = "APPLICATION_DB",
@@ -360,7 +358,7 @@ Module CodeAdminServiceTests
         Dim repository = CreateProtectedValueRepository()
         Dim service = CreateService(repository)
 
-        AssertThrows(Of AccessManagerForbiddenException)(
+        AssertThrows(Of AdminShellForbiddenException)(
             Sub() service.SetPosition(New CodeValuePositionCommand With {
                 .CodeClass = "APPLICATION_DB",
                 .CodeValue = "DEV_DOMAIN",
@@ -377,10 +375,10 @@ Module CodeAdminServiceTests
             .CodeValue = "DEV_DOMAIN"
         }
 
-        AssertThrows(Of AccessManagerForbiddenException)(
+        AssertThrows(Of AdminShellForbiddenException)(
             Sub() service.ActivateValue(command),
             "protected values cannot be activated")
-        AssertThrows(Of AccessManagerForbiddenException)(
+        AssertThrows(Of AdminShellForbiddenException)(
             Sub() service.DeactivateValue(command),
             "protected values cannot be deactivated")
     End Sub
@@ -408,7 +406,7 @@ Module CodeAdminServiceTests
         repository.Classes.Add(New CodeAdminClass With {.CodeClass = "WINDOW_SHADE_CD", .CodeClassDesc = "Window Shades", .Edit = True})
         repository.Values.Add(New CodeAdminValue With {.CodeValueId = 9, .CodeClass = "WINDOW_SHADE_CD", .CodeValue = "OPEN", .CodeValueDesc = "Open"})
 
-        AssertThrows(Of AccessManagerValidationException)(
+        AssertThrows(Of AdminShellValidationException)(
             Sub() CreateService(repository).SetStatus(New CodeValueLifecycleCommand With {.CodeClass = "WINDOW_SHADE_CD", .CodeValue = "OPEN", .Status = "X"}),
             "status rejects values outside Active, Inactive, and Archived")
     End Sub
@@ -465,7 +463,7 @@ Module CodeAdminServiceTests
     Private Sub TestCreateRetainsStrictCodeValuePolicy()
         Dim repository = CreateLegacyApplicationDbRepository()
 
-        AssertThrows(Of AccessManagerValidationException)(
+        AssertThrows(Of AdminShellValidationException)(
             Sub() CreateService(repository).CreateValue(New CreateCodeValueCommand With {
                 .CodeClass = "APPLICATION_DB",
                 .CodeValue = "/db/customforms.js",
@@ -475,10 +473,10 @@ Module CodeAdminServiceTests
     End Sub
 
     Private Sub TestExistingCodeValueReferenceRequiresNonblankBoundedValue()
-        AssertThrows(Of AccessManagerValidationException)(
+        AssertThrows(Of AdminShellValidationException)(
             Sub() CodeAdminValidation.ValidateExistingCodeValueReference(" "),
             "existing code value references require a value")
-        AssertThrows(Of AccessManagerValidationException)(
+        AssertThrows(Of AdminShellValidationException)(
             Sub() CodeAdminValidation.ValidateExistingCodeValueReference(New String("x"c, CodeAdminConstants.MaxCodeValueLength + 1)),
             "existing code value references enforce the maximum length")
     End Sub
@@ -492,7 +490,7 @@ Module CodeAdminServiceTests
         })
         Dim service = CreateService(repository)
 
-        AssertThrows(Of AccessManagerValidationException)(
+        AssertThrows(Of AdminShellValidationException)(
             Sub() service.SetPosition(New CodeValuePositionCommand With {
                 .CodeClass = "WINDOW_SHADE_CD",
                 .CodeValue = "MISSING",
@@ -517,7 +515,7 @@ Module CodeAdminServiceTests
         })
         Dim service = CreateService(repository)
 
-        AssertThrows(Of AccessManagerValidationException)(
+        AssertThrows(Of AdminShellValidationException)(
             Sub() service.SetPosition(New CodeValuePositionCommand With {
                 .CodeClass = "WINDOW_SHADE_CD",
                 .CodeValue = "CLOSED",
@@ -531,7 +529,7 @@ Module CodeAdminServiceTests
         repository.Classes.Add(New CodeAdminClass With {.CodeClass = "WINDOW_SHADE_CD", .CodeClassDesc = "Window Shades", .Edit = True})
         repository.Values.Add(New CodeAdminValue With {.CodeValueId = 4, .CodeClass = "WINDOW_SHADE_CD", .CodeValue = "ARCHIVED", .CodeValueDesc = "Archived", .Status = CodeAdminConstants.StatusArchived, .Inactive = True})
 
-        AssertThrows(Of AccessManagerValidationException)(
+        AssertThrows(Of AdminShellValidationException)(
             Sub() CreateService(repository).SetPosition(New CodeValuePositionCommand With {.CodeClass = "WINDOW_SHADE_CD", .CodeValue = "ARCHIVED", .NewPosition = 1}),
             "archived values cannot be positioned")
     End Sub
@@ -551,7 +549,7 @@ Module CodeAdminServiceTests
             .Inactive = True
         })
 
-        AssertThrows(Of AccessManagerValidationException)(
+        AssertThrows(Of AdminShellValidationException)(
             Sub() CreateService(repository).PatchValue(New PatchCodeValueCommand With {
                 .CodeValueId = 3,
                 .FieldName = "order_by",
@@ -568,7 +566,7 @@ Module CodeAdminServiceTests
             .Edit = True
         })
 
-        AssertThrows(Of AccessManagerValidationException)(
+        AssertThrows(Of AdminShellValidationException)(
             Sub() CreateService(repository).CreateValue(New CreateCodeValueCommand With {
                 .CodeClass = "WINDOW_SHADE_CD",
                 .CodeValue = "BLUE",
@@ -640,7 +638,7 @@ Module CodeAdminServiceTests
 
     Private Sub TestDeleteRequiresSelection()
         Dim service = CreateService(New FakeCodeAdminRepository())
-        AssertThrows(Of AccessManagerValidationException)(
+        AssertThrows(Of AdminShellValidationException)(
             Sub() service.DeleteValues(New DeleteCodeValuesCommand With {
                 .CodeValueIds = New List(Of Integer)()
             }),
@@ -689,9 +687,10 @@ Friend Class FakeCodeAdminRepository
     Public LookupCallCount As Integer
     Public LastProductOrganizationId As String
     Public LastCreated As CreateCodeValueCommand
-    Public CreatedLicenseObjType As Boolean
-    Public GenericDeleteCount As Integer
-    Public LicenseObjTypeDeleteCount As Integer
+    Public LastCreateContext As CodeAdminMutationContext
+    Public LastUpdateContext As CodeAdminMutationContext
+    Public LastDeleteContext As CodeAdminMutationContext
+    Public DeleteCount As Integer
     Public Statuses As New List(Of String)()
     Public LastUpdated As UpdateCodeValueCommand
     Public LastPositionedCodeValue As String
@@ -772,8 +771,9 @@ Friend Class FakeCodeAdminRepository
         Return ExistingPairs.ContainsKey(codeClass & "|" & codeValue)
     End Function
 
-    Public Function CreateValue(command As CreateCodeValueCommand, majorCode As String) As CodeAdminValue Implements ICodeAdminRepository.CreateValue
+    Public Function CreateValue(command As CreateCodeValueCommand, context As CodeAdminMutationContext) As CodeAdminValue Implements ICodeAdminRepository.CreateValue
         LastCreated = command
+        LastCreateContext = context
         Return New CodeAdminValue With {
             .CodeValueId = 99,
             .CodeClass = command.CodeClass,
@@ -785,31 +785,19 @@ Friend Class FakeCodeAdminRepository
         }
     End Function
 
-    Public Function CreateLicenseObjTypeValue(command As CreateCodeValueCommand, majorCode As String) As CodeAdminValue Implements ICodeAdminRepository.CreateLicenseObjTypeValue
-        CreatedLicenseObjType = True
-        Return CreateValue(command, majorCode)
-    End Function
-
-    Public Function UpdateValue(command As UpdateCodeValueCommand) As CodeAdminValue Implements ICodeAdminRepository.UpdateValue
+    Public Function UpdateValue(command As UpdateCodeValueCommand, context As CodeAdminMutationContext) As CodeAdminValue Implements ICodeAdminRepository.UpdateValue
         LastUpdated = command
+        LastUpdateContext = context
         Return GetValueById(command.CodeValueId)
-    End Function
-
-    Public Function UpdateLicenseObjTypeValue(command As UpdateCodeValueCommand, majorCode As String) As CodeAdminValue Implements ICodeAdminRepository.UpdateLicenseObjTypeValue
-        Throw New NotImplementedException()
     End Function
 
     Public Function PatchValue(command As PatchCodeValueCommand) As CodeAdminValue Implements ICodeAdminRepository.PatchValue
         Throw New NotImplementedException()
     End Function
 
-    Public Function DeleteValue(codeValueId As Integer) As CodeAdminDeleteResult Implements ICodeAdminRepository.DeleteValue
-        GenericDeleteCount += 1
-        Return New CodeAdminDeleteResult With {.Deleted = True}
-    End Function
-
-    Public Function DeleteLicenseObjTypeValue(codeValueId As Integer, majorCode As String) As CodeAdminDeleteResult Implements ICodeAdminRepository.DeleteLicenseObjTypeValue
-        LicenseObjTypeDeleteCount += 1
+    Public Function DeleteValue(codeValueId As Integer, context As CodeAdminMutationContext) As CodeAdminDeleteResult Implements ICodeAdminRepository.DeleteValue
+        DeleteCount += 1
+        LastDeleteContext = context
         Return New CodeAdminDeleteResult With {.Deleted = True}
     End Function
 

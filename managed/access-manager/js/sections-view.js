@@ -2,7 +2,7 @@
 
 (function (global) {
     const api = global.PilotApiClient;
-    const dialogs = global.PilotDialogs;
+    const dialogs = global.AdminShellDialogs;
     const reorder = global.AccessManagerReorder;
     const stateApi = global.AccessManagerState;
 
@@ -47,13 +47,17 @@
         workspaceHeader.className = "workspace-heading";
         workspaceHeader.innerHTML =
             "<div><h2>Sections and access</h2><p>Manage each section, its scripts, and its grants in one workspace.</p></div>";
+        const workspaceActions = document.createElement("div");
+        workspaceActions.className = "admin-actions admin-actions--end";
         if (caps.canManageGrants) {
             const accessButton = document.createElement("button");
             accessButton.type = "button";
+            accessButton.className = "admin-action admin-action--secondary";
             accessButton.innerHTML = "<i class=\"fa fa-search\" aria-hidden=\"true\"></i> Find access";
             accessButton.addEventListener("click", openAccessExplorer);
-            workspaceHeader.appendChild(accessButton);
+            workspaceActions.appendChild(accessButton);
         }
+        workspaceHeader.appendChild(workspaceActions);
         container.appendChild(workspaceHeader);
 
         const layout = document.createElement("div");
@@ -87,7 +91,7 @@
 
     function renderSectionToolbar(appState, caps) {
         const toolbar = document.createElement("div");
-        toolbar.className = "toolbar";
+        toolbar.className = "toolbar admin-actions";
 
         const inactiveLabel = document.createElement("label");
         const inactiveToggle = document.createElement("input");
@@ -104,8 +108,8 @@
         if (caps.canManageSections) {
             const createButton = document.createElement("button");
             createButton.type = "button";
-            createButton.className = "primary";
-            createButton.textContent = "New section";
+            createButton.className = "admin-action admin-action--primary";
+            createButton.innerHTML = "<i class=\"fa fa-plus\" aria-hidden=\"true\"></i> Add section";
             createButton.addEventListener("click", createSection);
             toolbar.appendChild(createButton);
         }
@@ -169,7 +173,7 @@
         if (caps.canManageSections) {
             const editNameButton = document.createElement("button");
             editNameButton.type = "button";
-            editNameButton.className = "icon-button";
+            editNameButton.className = "admin-action admin-action--quiet admin-action--icon";
             editNameButton.innerHTML = "<i class=\"fa fa-pencil\" aria-hidden=\"true\"></i>";
             editNameButton.title = "Edit section name";
             editNameButton.setAttribute("aria-label", "Edit section name");
@@ -184,8 +188,8 @@
         meta.className = "empty-state section-meta";
         meta.innerHTML = "Update #" + section.UpdateNo + " &middot; " +
             (section.Inactive
-                ? "<span class=\"status-pill inactive\">Inactive</span>"
-                : "<span class=\"status-pill active\">Active</span>");
+                ? "<span class=\"admin-status admin-status--inactive\">Inactive</span>"
+                : "<span class=\"admin-status admin-status--active\">Active</span>");
         identity.appendChild(meta);
         wrapper.appendChild(identity);
 
@@ -194,10 +198,13 @@
         }
 
         const toolbar = document.createElement("div");
-        toolbar.className = "toolbar";
+        toolbar.className = "toolbar admin-actions";
 
         const lifecycleButton = document.createElement("button");
         lifecycleButton.type = "button";
+        lifecycleButton.className = section.Inactive
+            ? "admin-action admin-action--activate"
+            : "admin-action admin-action--deactivate";
         lifecycleButton.innerHTML = section.Inactive
             ? "<i class=\"fa fa-undo\" aria-hidden=\"true\"></i> Activate"
             : "<i class=\"fa fa-ban\" aria-hidden=\"true\"></i> Deactivate";
@@ -207,8 +214,8 @@
 
         const deleteButton = document.createElement("button");
         deleteButton.type = "button";
-        deleteButton.className = "danger";
-        deleteButton.innerHTML = "<i class=\"fa fa-trash\" aria-hidden=\"true\"></i> Delete";
+        deleteButton.className = "admin-action admin-action--danger";
+        deleteButton.innerHTML = "<i class=\"fa fa-trash\" aria-hidden=\"true\"></i> Delete permanently";
         deleteButton.addEventListener("click", function () {
             deleteSection(section);
         });
@@ -225,17 +232,20 @@
         const heading = document.createElement("div");
         heading.className = "subpanel-heading";
         heading.innerHTML = "<h3>Section scripts</h3>";
+        const headingActions = document.createElement("div");
+        headingActions.className = "admin-actions admin-actions--end";
 
         if (caps.canManageMemberships) {
             const addButton = document.createElement("button");
             addButton.type = "button";
-            addButton.className = "primary";
+            addButton.className = "admin-action admin-action--primary";
             addButton.innerHTML = "<i class=\"fa fa-plus\" aria-hidden=\"true\"></i> Add script";
             addButton.addEventListener("click", function () {
                 openScriptPicker(section, items);
             });
-            heading.appendChild(addButton);
+            headingActions.appendChild(addButton);
         }
+        heading.appendChild(headingActions);
         panel.appendChild(heading);
 
         const tableWrap = document.createElement("div");
@@ -258,9 +268,9 @@
                 "<td></td>" +
                 "<td class=\"path-cell\">" + escapeHtml(item.ScriptName) + "</td>" +
                 "<td>" + (item.ScriptInactive
-                    ? "<span class=\"status-pill inactive\">Inactive</span>"
-                    : "<span class=\"status-pill active\">Active</span>") + "</td>" +
-                "<td class=\"action-cell\"></td>";
+                    ? "<span class=\"admin-status admin-status--inactive\">Inactive</span>"
+                    : "<span class=\"admin-status admin-status--active\">Active</span>") + "</td>" +
+                "<td class=\"action-cell admin-actions\"></td>";
             const titleCell = row.firstElementChild;
             const actions = row.lastElementChild;
 
@@ -281,7 +291,7 @@
             if (caps.canManageScripts) {
                 const editButton = document.createElement("button");
                 editButton.type = "button";
-                editButton.className = "icon-button";
+                editButton.className = "admin-action admin-action--quiet admin-action--icon";
                 editButton.innerHTML = "<i class=\"fa fa-pencil\" aria-hidden=\"true\"></i>";
                 editButton.title = "Edit script";
                 editButton.setAttribute("aria-label", "Edit " + item.Title);
@@ -292,7 +302,9 @@
 
                 const lifecycleButton = document.createElement("button");
                 lifecycleButton.type = "button";
-                lifecycleButton.className = "icon-button";
+                lifecycleButton.className = item.ScriptInactive
+                    ? "admin-action admin-action--activate admin-action--icon"
+                    : "admin-action admin-action--deactivate admin-action--icon";
                 lifecycleButton.innerHTML = item.ScriptInactive
                     ? "<i class=\"fa fa-undo\" aria-hidden=\"true\"></i>"
                     : "<i class=\"fa fa-ban\" aria-hidden=\"true\"></i>";
@@ -305,7 +317,7 @@
 
                 const deleteButton = document.createElement("button");
                 deleteButton.type = "button";
-                deleteButton.className = "icon-button danger-icon";
+                deleteButton.className = "admin-action admin-action--danger admin-action--icon";
                 deleteButton.innerHTML = "<i class=\"fa fa-trash\" aria-hidden=\"true\"></i>";
                 deleteButton.title = "Delete script everywhere";
                 deleteButton.setAttribute("aria-label", "Delete " + item.Title + " everywhere");
@@ -318,7 +330,7 @@
             if (caps.canManageMemberships) {
                 const removeButton = document.createElement("button");
                 removeButton.type = "button";
-                removeButton.className = "icon-button";
+                removeButton.className = "admin-action admin-action--quiet admin-action--icon";
                 removeButton.innerHTML = "<i class=\"fa fa-chain-broken\" aria-hidden=\"true\"></i>";
                 removeButton.title = "Remove from section";
                 removeButton.setAttribute("aria-label", "Remove " + item.Title + " from section");
@@ -346,17 +358,20 @@
         const heading = document.createElement("div");
         heading.className = "subpanel-heading";
         heading.innerHTML = "<h3>Section grants</h3>";
+        const headingActions = document.createElement("div");
+        headingActions.className = "admin-actions admin-actions--end";
 
         if (caps.canManageGrants) {
             const addButton = document.createElement("button");
             addButton.type = "button";
-            addButton.className = "primary";
+            addButton.className = "admin-action admin-action--primary";
             addButton.innerHTML = "<i class=\"fa fa-plus\" aria-hidden=\"true\"></i> Add grant";
             addButton.addEventListener("click", function () {
                 openGrantPicker(section, grants);
             });
-            heading.appendChild(addButton);
+            headingActions.appendChild(addButton);
         }
+        heading.appendChild(headingActions);
         panel.appendChild(heading);
 
         const tableWrap = document.createElement("div");
@@ -375,14 +390,16 @@
                 "<td>" + escapeHtml(grant.PrincipalLabel || ("#" + grant.UserId)) + "</td>" +
                 "<td>" + escapeHtml(stateApi.principalTypeLabel(grant.UserTy)) + "</td>" +
                 "<td>" + (grant.Inactive
-                    ? "<span class=\"status-pill inactive\">Inactive</span>"
-                    : "<span class=\"status-pill active\">Active</span>") + "</td>" +
-                "<td class=\"action-cell\"></td>";
+                    ? "<span class=\"admin-status admin-status--inactive\">Inactive</span>"
+                    : "<span class=\"admin-status admin-status--active\">Active</span>") + "</td>" +
+                "<td class=\"action-cell admin-actions\"></td>";
             const actions = row.lastElementChild;
             if (caps.canManageGrants) {
                 const toggle = document.createElement("button");
                 toggle.type = "button";
-                toggle.className = "icon-button";
+                toggle.className = grant.Inactive
+                    ? "admin-action admin-action--activate admin-action--icon"
+                    : "admin-action admin-action--deactivate admin-action--icon";
                 toggle.innerHTML = grant.Inactive
                     ? "<i class=\"fa fa-undo\" aria-hidden=\"true\"></i>"
                     : "<i class=\"fa fa-ban\" aria-hidden=\"true\"></i>";
@@ -416,7 +433,7 @@
                 "<div class=\"script-details\"><div><strong>" + escapeHtml(item.Title) + "</strong>" +
                 "<p class=\"path-cell\">" + escapeHtml(item.ScriptName) + "</p>" +
                 "<p class=\"empty-state\">Type: " + escapeHtml(item.ScriptTy) + "</p></div>" +
-                "<button type=\"button\" class=\"icon-button close-details\" aria-label=\"Close\"><i class=\"fa fa-times\" aria-hidden=\"true\"></i></button></div>";
+                "<button type=\"button\" class=\"admin-action admin-action--quiet admin-action--icon close-details\" aria-label=\"Close\"><i class=\"fa fa-times\" aria-hidden=\"true\"></i></button></div>";
             detailCell.querySelector(".close-details").addEventListener("click", function () {
                 render(stateApi.get());
             });
@@ -429,8 +446,8 @@
             "<div class=\"field\"><label>Title</label><input name=\"title\" required></div>" +
             "<div class=\"field script-path-field\"><label>Script path</label><input name=\"scriptName\" required></div>" +
             "<div class=\"field\"><label>Type</label><select name=\"scriptTy\"></select></div>" +
-            "<div class=\"inline-edit-actions\"><button type=\"submit\" class=\"primary\"><i class=\"fa fa-check\" aria-hidden=\"true\"></i> Save</button>" +
-            "<button type=\"button\" class=\"cancel-edit\"><i class=\"fa fa-times\" aria-hidden=\"true\"></i> Cancel</button></div>";
+            "<div class=\"inline-edit-actions admin-actions\"><button type=\"submit\" class=\"admin-action admin-action--primary\"><i class=\"fa fa-check\" aria-hidden=\"true\"></i> Save</button>" +
+            "<button type=\"button\" class=\"admin-action admin-action--secondary cancel-edit\"><i class=\"fa fa-times\" aria-hidden=\"true\"></i> Cancel</button></div>";
         const titleInput = form.querySelector("[name=\"title\"]");
         const pathInput = form.querySelector("[name=\"scriptName\"]");
         const typeSelect = form.querySelector("[name=\"scriptTy\"]");
@@ -544,32 +561,117 @@
         createArea.className = "picker-create";
         const createToggle = document.createElement("button");
         createToggle.type = "button";
+        createToggle.className = "admin-action admin-action--secondary";
         createToggle.innerHTML = "<i class=\"fa fa-plus\" aria-hidden=\"true\"></i> Add a script not listed";
         const createForm = document.createElement("form");
         createForm.className = "script-create-form";
         createForm.hidden = true;
         createForm.innerHTML =
-            "<div class=\"field\"><label for=\"newScriptTitle\">Title</label><input id=\"newScriptTitle\" name=\"title\" required></div>" +
-            "<div class=\"field\"><label for=\"newScriptPath\">Script path</label><input id=\"newScriptPath\" name=\"scriptName\" required placeholder=\"/admin/admin/example.asp\"></div>" +
-            "<div class=\"inline-edit-actions\"><button type=\"submit\" class=\"primary\">Add to section</button></div>";
+            "<div class=\"field\"><label for=\"newScriptTitle\">Title</label><input id=\"newScriptTitle\" name=\"title\" required maxlength=\"255\"></div>" +
+            "<div class=\"field script-path-field\"><label for=\"newScriptPath\">Script path</label><input id=\"newScriptPath\" name=\"scriptName\" required maxlength=\"512\" placeholder=\"/admin/admin/example.asp\" aria-describedby=\"newScriptPathStatus\"><span id=\"newScriptPathStatus\" class=\"script-path-status\" aria-live=\"polite\"></span></div>" +
+            "<div class=\"inline-edit-actions admin-actions\"><button type=\"submit\" class=\"admin-action admin-action--primary\" disabled>Add to section</button></div>";
+        const titleInput = createForm.querySelector("[name=\"title\"]");
+        const pathInput = createForm.querySelector("[name=\"scriptName\"]");
+        const pathStatus = createForm.querySelector(".script-path-status");
+        const submitButton = createForm.querySelector("[type=\"submit\"]");
+        let routeChecked = false;
+        let routeReachable = false;
+        let routeCheckVersion = 0;
         let scripts = [];
+
+        function getPathValidationMessage() {
+            const scriptName = pathInput.value.trim();
+            if (!scriptName) {
+                return "";
+            }
+            if (!scriptName.startsWith("/")) {
+                return "Script path must start with '/'.";
+            }
+            if (scriptName.length > 512 || /\.\.|\\\\|\/\/|\?|#/.test(scriptName)) {
+                return "Script path is malformed.";
+            }
+            if (!routeChecked) {
+                return "Check the script path before adding it.";
+            }
+            if (!routeReachable) {
+                return "The script path is not reachable.";
+            }
+            return "";
+        }
+
+        function updateCreateFormState() {
+            const pathError = getPathValidationMessage();
+            pathInput.setCustomValidity(pathError);
+            submitButton.disabled = !titleInput.value.trim() || !pathInput.value.trim() || !typeSelect.value || !!pathError;
+        }
+
+        async function checkRoute() {
+            const scriptName = pathInput.value.trim();
+            routeCheckVersion += 1;
+            const checkVersion = routeCheckVersion;
+            routeChecked = false;
+            routeReachable = false;
+
+            const pathError = getPathValidationMessage();
+            if (pathError && pathError !== "Check the script path before adding it.") {
+                pathStatus.textContent = pathError;
+                updateCreateFormState();
+                return;
+            }
+
+            pathStatus.textContent = "Checking route availability...";
+            updateCreateFormState();
+            try {
+                const result = await api.get("api/scripts.ashx?action=checkRoute&scriptName=" + encodeURIComponent(scriptName));
+                if (checkVersion !== routeCheckVersion) {
+                    return;
+                }
+                routeChecked = true;
+                routeReachable = !!result.reachable;
+                pathStatus.textContent = routeReachable
+                    ? "Route is reachable."
+                    : "Route could not be reached.";
+            } catch (error) {
+                if (checkVersion !== routeCheckVersion) {
+                    return;
+                }
+                routeChecked = true;
+                routeReachable = false;
+                pathStatus.textContent = "Route could not be checked.";
+            }
+            updateCreateFormState();
+        }
 
         createToggle.addEventListener("click", function () {
             createForm.hidden = !createForm.hidden;
             createToggle.setAttribute("aria-expanded", createForm.hidden ? "false" : "true");
             if (!createForm.hidden) {
-                createForm.querySelector("[name=\"title\"]").focus();
+                updateCreateFormState();
+                titleInput.focus();
             }
         });
+        titleInput.addEventListener("input", updateCreateFormState);
+        pathInput.addEventListener("input", function () {
+            routeCheckVersion += 1;
+            routeChecked = false;
+            routeReachable = false;
+            pathStatus.textContent = pathInput.value.trim() ? "Check the script path before adding it." : "";
+            updateCreateFormState();
+        });
+        pathInput.addEventListener("blur", checkRoute);
+        typeSelect.addEventListener("change", updateCreateFormState);
         createForm.addEventListener("submit", async function (event) {
             event.preventDefault();
-            const submitButton = createForm.querySelector("[type=\"submit\"]");
+            updateCreateFormState();
+            if (submitButton.disabled || !createForm.reportValidity()) {
+                return;
+            }
             try {
-                submitButton.disabled = true;
+                setPending(submitButton, true);
                 const script = await api.post("api/scripts.ashx?action=create", {
                     ScriptTy: typeSelect.value,
-                    ScriptName: createForm.querySelector("[name=\"scriptName\"]").value.trim(),
-                    Title: createForm.querySelector("[name=\"title\"]").value.trim()
+                    ScriptName: pathInput.value.trim(),
+                    Title: titleInput.value.trim()
                 });
                 await api.post("api/sections.ashx?action=addItem", {
                     SectionId: section.SectionId,
@@ -578,7 +680,7 @@
                 picker.close();
                 await selectSection(section.SectionId);
             } catch (error) {
-                submitButton.disabled = false;
+                setPending(submitButton, false);
                 reportError(error);
             }
         });
@@ -592,6 +694,7 @@
             option.selected = type.CodeValue === (appState.workspace.defaultScriptType || "");
             typeSelect.appendChild(option);
         });
+        updateCreateFormState();
 
         function renderResults() {
             const visible = scripts.filter(function (script) {
@@ -615,12 +718,14 @@
                     "<td class=\"action-cell\"></td>";
                 const addButton = document.createElement("button");
                 addButton.type = "button";
-                addButton.className = "primary";
-                addButton.textContent = assignedIds[script.ScriptId] ? "Added" : "Add";
+                addButton.className = "admin-action admin-action--primary admin-action--sm";
+                addButton.innerHTML = assignedIds[script.ScriptId]
+                    ? "Added"
+                    : "<i class=\"fa fa-plus\" aria-hidden=\"true\"></i> Add";
                 addButton.disabled = !!assignedIds[script.ScriptId];
                 addButton.addEventListener("click", async function () {
                     try {
-                        addButton.disabled = true;
+                        setPending(addButton, true);
                         await api.post("api/sections.ashx?action=addItem", {
                             SectionId: section.SectionId,
                             ScriptId: script.ScriptId
@@ -628,7 +733,7 @@
                         picker.close();
                         await selectSection(section.SectionId);
                     } catch (error) {
-                        addButton.disabled = false;
+                        setPending(addButton, false);
                         reportError(error);
                     }
                 });
@@ -669,7 +774,7 @@
         form.innerHTML =
             "<div class=\"field\"><label for=\"pickerPrincipalType\">Principal type</label><select id=\"pickerPrincipalType\" name=\"principalTy\"><option value=\"GROU\">Group</option><option value=\"USER\">User</option></select></div>" +
             "<div class=\"field picker-search\"><label for=\"pickerPrincipalSearch\">Find a user or group</label><input id=\"pickerPrincipalSearch\" name=\"query\" type=\"search\" required placeholder=\"Enter a name or username\"></div>" +
-            "<div class=\"field\"><button type=\"submit\" class=\"primary\"><i class=\"fa fa-search\" aria-hidden=\"true\"></i> Search</button></div>";
+            "<div class=\"field\"><button type=\"submit\" class=\"admin-action admin-action--secondary\"><i class=\"fa fa-search\" aria-hidden=\"true\"></i> Search</button></div>";
         const results = document.createElement("div");
         results.className = "picker-results";
         results.innerHTML = "<p class=\"empty-state picker-empty\">Search by name or username. IDs are handled automatically.</p>";
@@ -716,12 +821,14 @@
                     "<td class=\"action-cell\"></td>";
                 const grantButton = document.createElement("button");
                 grantButton.type = "button";
-                grantButton.className = "primary";
-                grantButton.textContent = alreadyGranted ? "Granted" : "Grant";
+                grantButton.className = "admin-action admin-action--primary admin-action--sm";
+                grantButton.innerHTML = alreadyGranted
+                    ? "Granted"
+                    : "<i class=\"fa fa-plus\" aria-hidden=\"true\"></i> Grant";
                 grantButton.disabled = alreadyGranted;
                 grantButton.addEventListener("click", async function () {
                     try {
-                        grantButton.disabled = true;
+                        setPending(grantButton, true);
                         await api.post("api/grants.ashx?action=create", {
                             SecureTy: "SECT",
                             SecureId: section.SectionId,
@@ -731,7 +838,7 @@
                         picker.close();
                         await selectSection(section.SectionId);
                     } catch (error) {
-                        grantButton.disabled = false;
+                        setPending(grantButton, false);
                         reportError(error);
                     }
                 });
@@ -754,7 +861,7 @@
         form.innerHTML =
             "<div class=\"field\"><label for=\"accessPrincipalType\">Principal type</label><select id=\"accessPrincipalType\"><option value=\"GROU\">Group</option><option value=\"USER\">User</option></select></div>" +
             "<div class=\"field picker-search\"><label for=\"accessPrincipalSearch\">Name or username</label><input id=\"accessPrincipalSearch\" type=\"search\" required></div>" +
-            "<div class=\"field\"><button type=\"submit\" class=\"primary\"><i class=\"fa fa-search\" aria-hidden=\"true\"></i> Search</button></div>";
+            "<div class=\"field\"><button type=\"submit\" class=\"admin-action admin-action--secondary\"><i class=\"fa fa-search\" aria-hidden=\"true\"></i> Search</button></div>";
         const typeSelect = form.querySelector("select");
         const searchInput = form.querySelector("input");
         const results = document.createElement("div");
@@ -796,7 +903,7 @@
                     "<td class=\"action-cell\"></td>";
                 const viewButton = document.createElement("button");
                 viewButton.type = "button";
-                viewButton.className = "primary";
+                viewButton.className = "admin-action admin-action--primary admin-action--sm";
                 viewButton.textContent = "View access";
                 viewButton.addEventListener("click", function () {
                     loadPrincipalAccess(principal);
@@ -833,6 +940,7 @@
                 "<p>Direct section and script grants</p></div>";
             const backButton = document.createElement("button");
             backButton.type = "button";
+            backButton.className = "admin-action admin-action--secondary";
             backButton.innerHTML = "<i class=\"fa fa-arrow-left\" aria-hidden=\"true\"></i> Results";
             backButton.addEventListener("click", function () {
                 form.dispatchEvent(new Event("submit", { cancelable: true }));
@@ -858,12 +966,14 @@
                     "<td>" + escapeHtml(grant.SecureLabel || ("#" + grant.SecureId)) + "</td>" +
                     "<td>" + (grant.SecureTy === "SECT" ? "Section" : "Script") + "</td>" +
                     "<td>" + (grant.Inactive
-                        ? "<span class=\"status-pill inactive\">Inactive</span>"
-                        : "<span class=\"status-pill active\">Active</span>") + "</td>" +
-                    "<td class=\"action-cell\"></td>";
+                        ? "<span class=\"admin-status admin-status--inactive\">Inactive</span>"
+                        : "<span class=\"admin-status admin-status--active\">Active</span>") + "</td>" +
+                    "<td class=\"action-cell admin-actions\"></td>";
                 const toggle = document.createElement("button");
                 toggle.type = "button";
-                toggle.className = "icon-button";
+                toggle.className = grant.Inactive
+                    ? "admin-action admin-action--activate admin-action--icon"
+                    : "admin-action admin-action--deactivate admin-action--icon";
                 toggle.innerHTML = grant.Inactive
                     ? "<i class=\"fa fa-undo\" aria-hidden=\"true\"></i>"
                     : "<i class=\"fa fa-ban\" aria-hidden=\"true\"></i>";
@@ -913,7 +1023,7 @@
         title.textContent = titleText;
         const closeButton = document.createElement("button");
         closeButton.type = "button";
-        closeButton.className = "icon-button";
+        closeButton.className = "admin-action admin-action--quiet admin-action--icon";
         closeButton.innerHTML = "<i class=\"fa fa-times\" aria-hidden=\"true\"></i>";
         closeButton.setAttribute("aria-label", "Close");
         const content = document.createElement("div");
@@ -986,14 +1096,19 @@
         }
     }
 
+    function setPending(button, pending) {
+        button.disabled = pending;
+        button.setAttribute("aria-busy", pending ? "true" : "false");
+    }
+
     function beginSectionNameEdit(section, identity) {
         const form = document.createElement("form");
         form.className = "inline-edit inline-edit-section";
         form.innerHTML =
             "<label class=\"sr-only\" for=\"inlineSectionName\">Section name</label>" +
             "<input id=\"inlineSectionName\" name=\"sectionName\" required>" +
-            "<button type=\"submit\" class=\"icon-button primary-icon\" title=\"Save\" aria-label=\"Save section name\"><i class=\"fa fa-check\" aria-hidden=\"true\"></i></button>" +
-            "<button type=\"button\" class=\"icon-button cancel-edit\" title=\"Cancel\" aria-label=\"Cancel\"><i class=\"fa fa-times\" aria-hidden=\"true\"></i></button>";
+            "<button type=\"submit\" class=\"admin-action admin-action--primary admin-action--icon\" title=\"Save\" aria-label=\"Save section name\"><i class=\"fa fa-check\" aria-hidden=\"true\"></i></button>" +
+            "<button type=\"button\" class=\"admin-action admin-action--secondary admin-action--icon cancel-edit\" title=\"Cancel\" aria-label=\"Cancel\"><i class=\"fa fa-times\" aria-hidden=\"true\"></i></button>";
         const input = form.querySelector("input");
         input.value = section.SectionName;
         identity.replaceChildren(form);
