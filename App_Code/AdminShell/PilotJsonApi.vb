@@ -24,6 +24,11 @@ Public NotInheritable Class PilotJsonApi
     End Sub
 
     Public Shared Function IssueCsrfToken(context As HttpContext) As String
+        Dim existingToken = TryCast(context.Session(CsrfSessionKey), String)
+        If Not String.IsNullOrWhiteSpace(existingToken) Then
+            Return existingToken
+        End If
+
         Dim bytes(31) As Byte
         Using generator = RandomNumberGenerator.Create()
             generator.GetBytes(bytes)

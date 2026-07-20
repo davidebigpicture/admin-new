@@ -68,7 +68,11 @@ Public Class AccessManagerWorkspaceHandler
             End If
 
             Dim service As New AccessManagerService(user)
-            Dim workspace = service.GetWorkspace()
+            Dim includeInactive = String.Equals(
+                context.Request.QueryString("includeInactive"),
+                "true",
+                StringComparison.OrdinalIgnoreCase)
+            Dim workspace = service.GetWorkspace(includeInactive)
             Dim payload As New Dictionary(Of String, Object) From {
                 {"capabilities", PilotJsonApi.SerializeCapabilities(workspace.Capabilities)},
                 {"sections", workspace.Sections},

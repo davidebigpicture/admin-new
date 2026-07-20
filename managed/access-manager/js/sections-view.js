@@ -133,6 +133,7 @@
             const button = document.createElement("button");
             button.type = "button";
             button.textContent = section.SectionName + (section.Inactive ? " (inactive)" : "");
+            button.classList.toggle("is-inactive", !!section.Inactive);
             if (section.SectionId === selectedId) {
                 button.setAttribute("aria-current", "true");
             }
@@ -568,18 +569,23 @@
         createForm.hidden = true;
         createForm.innerHTML =
             "<div class=\"field\"><label for=\"newScriptTitle\">Title</label><input id=\"newScriptTitle\" name=\"title\" required maxlength=\"255\"></div>" +
-            "<div class=\"field script-path-field\"><label for=\"newScriptPath\">Script path</label><input id=\"newScriptPath\" name=\"scriptName\" required maxlength=\"512\" placeholder=\"/admin/admin/example.asp\" aria-describedby=\"newScriptPathStatus\"><span id=\"newScriptPathStatus\" class=\"script-path-status\" aria-live=\"polite\"></span></div>" +
+            "<div class=\"field script-path-field\"><label for=\"newScriptPath\">Script path</label><input id=\"newScriptPath\" name=\"scriptName\" required maxlength=\"512\" placeholder=\"/admin/admin/example.asp\" aria-describedby=\"newScriptRouteAlert\"></div>" +
             "<div class=\"inline-edit-actions admin-actions\"><button type=\"submit\" class=\"admin-action admin-action--primary\" disabled>Add to section</button></div>";
         const titleInput = createForm.querySelector("[name=\"title\"]");
         const pathInput = createForm.querySelector("[name=\"scriptName\"]");
-        const pathStatus = createForm.querySelector(".script-path-status");
+        const routeAlert = document.createElement("div");
+        routeAlert.id = "newScriptRouteAlert";
+        routeAlert.className = "message info script-route-alert";
+        routeAlert.setAttribute("role", "status");
+        routeAlert.setAttribute("aria-live", "polite");
+        routeAlert.hidden = true;
         const submitButton = createForm.querySelector("[type=\"submit\"]");
         let routeChecked = false;
         let routeReachable = false;
         let routeCheckVersion = 0;
         let scripts = [];
 
-        function getPathValidationMessage() {
+        function getPathSyntaxMessage() {
             const scriptName = pathInput.value.trim();
             if (!scriptName) {
                 return "";
@@ -590,8 +596,19 @@
             if (scriptName.length > 512 || /\.\.|\\\\|\/\/|\?|#/.test(scriptName)) {
                 return "Script path is malformed.";
             }
+            return "";
+        }
+
+        function getPathValidationMessage() {
+            const syntaxMessage = getPathSyntaxMessage();
+            if (syntaxMessage) {
+                return syntaxMessage;
+            }
+            if (!pathInput.value.trim()) {
+                return "";
+            }
             if (!routeChecked) {
-                return "Check the script path before adding it.";
+                return "Script path is being validated.";
             }
             if (!routeReachable) {
                 return "The script path is not reachable.";
@@ -605,6 +622,12 @@
             submitButton.disabled = !titleInput.value.trim() || !pathInput.value.trim() || !typeSelect.value || !!pathError;
         }
 
+        function showRouteAlert(message, isError) {
+            routeAlert.hidden = !message;
+            routeAlert.className = "message " + (isError ? "error" : "info") + " script-route-alert";
+            routeAlert.textContent = message;
+        }
+
         async function checkRoute() {
             const scriptName = pathInput.value.trim();
             routeCheckVersion += 1;
@@ -612,14 +635,14 @@
             routeChecked = false;
             routeReachable = false;
 
-            const pathError = getPathValidationMessage();
-            if (pathError && pathError !== "Check the script path before adding it.") {
-                pathStatus.textContent = pathError;
+            const syntaxMessage = getPathSyntaxMessage();
+            if (syntaxMessage) {
+                showRouteAlert(syntaxMessage, true);
                 updateCreateFormState();
                 return;
             }
 
-            pathStatus.textContent = "Checking route availability...";
+            showRouteAlert("Checking route availability...", false);
             updateCreateFormState();
             try {
                 const result = await api.get("api/scripts.ashx?action=checkRoute&scriptName=" + encodeURIComponent(scriptName));
@@ -628,16 +651,17 @@
                 }
                 routeChecked = true;
                 routeReachable = !!result.reachable;
-                pathStatus.textContent = routeReachable
-                    ? "Route is reachable."
-                    : "Route could not be reached.";
+                showRouteAlert(
+                    routeReachable ? "Route is reachable." : "Route could not be reached.",
+                    !routeReachable
+                );
             } catch (error) {
                 if (checkVersion !== routeCheckVersion) {
                     return;
                 }
                 routeChecked = true;
                 routeReachable = false;
-                pathStatus.textContent = "Route could not be checked.";
+                showRouteAlert("Route could not be checked.", true);
             }
             updateCreateFormState();
         }
@@ -655,7 +679,7 @@
             routeCheckVersion += 1;
             routeChecked = false;
             routeReachable = false;
-            pathStatus.textContent = pathInput.value.trim() ? "Check the script path before adding it." : "";
+            showRouteAlert("", false);
             updateCreateFormState();
         });
         pathInput.addEventListener("blur", checkRoute);
@@ -685,6 +709,7 @@
             }
         });
         createArea.appendChild(createToggle);
+        createArea.appendChild(routeAlert);
         createArea.appendChild(createForm);
 
         scriptTypes.forEach(function (type) {
@@ -1067,7 +1092,11 @@
     }
 
     async function selectSection(sectionId) {
-        const workspace = await api.get("api/workspace.ashx?sectionId=" + sectionId);
+        const includeInactive = stateApi.get().includeInactiveSections;
+        const workspace = await api.get(
+            "api/workspace.ashx?sectionId=" + sectionId +
+            "&includeInactive=" + (includeInactive ? "true" : "false")
+        );
         const appState = stateApi.get();
         stateApi.set({
             selectedSectionId: sectionId,
@@ -1115,8 +1144,16 @@
         input.focus();
         input.select();
 
-        form.querySelector(".cancel-edit").addEventListener("click", function () {
+        function cancelEdit() {
             render(stateApi.get());
+        }
+
+        form.querySelector(".cancel-edit").addEventListener("click", cancelEdit);
+        form.addEventListener("keydown", function (event) {
+            if (event.key === "Escape") {
+                event.preventDefault();
+                cancelEdit();
+            }
         });
         form.addEventListener("submit", async function (event) {
             event.preventDefault();

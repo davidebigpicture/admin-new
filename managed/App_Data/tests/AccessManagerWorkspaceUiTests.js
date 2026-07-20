@@ -30,11 +30,15 @@ const accessManagerHandlers = fs.readFileSync(
     path.join(managedRoot, "..", "App_Code", "AdminShell", "AccessManager", "AccessManagerApiHandlers.vb"),
     "utf8"
 );
+const accessManagerService = fs.readFileSync(
+    path.join(managedRoot, "..", "App_Code", "AdminShell", "AccessManager", "AccessManagerService.vb"),
+    "utf8"
+);
 
 assertTrue(indexAspx.includes('Inherits="AccessManagerPage"') && indexAspx.includes('MasterPageFile="../shared/ManagedShell.master"'), "Access Manager retains server-side authorization through the managed master host");
 assertTrue(!indexAspx.includes("viewScripts"), "dedicated Scripts panel is removed");
 assertTrue(!indexAspx.includes("viewAccess"), "dedicated Access panel is removed");
-assertTrue(indexAspx.indexOf("js/state.js") < indexAspx.indexOf("js/reorder.js") && indexAspx.indexOf("js/reorder.js") < indexAspx.indexOf("js/sections-view.js") && indexAspx.indexOf("js/sections-view.js") < indexAspx.indexOf("js/app.js") && indexAspx.includes('access-manager.css?v=0719aj') && indexAspx.includes('reorder.js?v=0719ak') && indexAspx.includes('sections-view.js?v=0719route1'), "Access Manager runtime dependencies load before the refreshed app bootstrap and use the current asset versions");
+assertTrue(indexAspx.indexOf("js/state.js") < indexAspx.indexOf("js/reorder.js") && indexAspx.indexOf("js/reorder.js") < indexAspx.indexOf("js/sections-view.js") && indexAspx.indexOf("js/sections-view.js") < indexAspx.indexOf("js/app.js") && indexAspx.includes('access-manager.css?v=0719route3') && indexAspx.includes('reorder.js?v=0719ak') && indexAspx.includes('sections-view.js?v=0719route5'), "Access Manager runtime dependencies load before the refreshed app bootstrap and use the current asset versions");
 assertTrue(!appJs.includes("AccessManagerScriptsView"), "workspace no longer bootstraps Scripts view");
 assertTrue(!appJs.includes("AccessManagerAccessView"), "workspace no longer bootstraps Access view");
 assertTrue(indexAspx.includes("id=\"appMessage\"") && indexAspx.includes("id=\"viewSections\""), "workspace retains its content regions");
@@ -54,8 +58,7 @@ assertTrue(!shellJs.includes("Admin sections"), "section menu uses an unlabeled 
 assertTrue(shellJs.includes("closeOtherSections"), "section menu behaves as a single-open accordion");
 assertTrue(sectionsJs.includes("beginSectionNameEdit"), "section names support inline editing");
 assertTrue(
-    sectionsJs.includes("form.addEventListener(\"keydown\"") &&
-        sectionsJs.includes("event.key === \"Escape\""),
+    /function beginSectionNameEdit[\s\S]*?form\.addEventListener\("keydown", function \(event\) \{[\s\S]*?event\.key === "Escape"[\s\S]*?cancelEdit\(\);/.test(sectionsJs),
     "Escape cancels inline section-name editing"
 );
 assertTrue(sectionsJs.includes("beginScriptEdit"), "section scripts support inline editing");
@@ -76,8 +79,11 @@ assertTrue(
     sectionsJs.includes('action=checkRoute&scriptName=') &&
         sectionsJs.includes('pathInput.addEventListener("blur", checkRoute)') &&
         sectionsJs.includes('submitButton.disabled = !titleInput.value.trim() || !pathInput.value.trim() || !typeSelect.value || !!pathError;') &&
-        sectionsJs.includes('Route is reachable.'),
-    "new scripts require complete fields and a reachable path before they can be added"
+        sectionsJs.includes('Route is reachable.') &&
+        !sectionsJs.includes('Check the script path before adding it.') &&
+        sectionsJs.includes('createArea.appendChild(routeAlert)') &&
+        accessCss.includes('.script-route-alert {'),
+    "new scripts require complete fields, a reachable path, and show route feedback above the control row"
 );
 assertTrue(
     accessManagerHandlers.includes('action = "checkroute"') &&
@@ -85,6 +91,20 @@ assertTrue(
         accessManagerHandlers.includes('request.Method = "HEAD"') &&
         accessManagerHandlers.includes('New Dictionary(Of String, Object) From {{"reachable", IsRouteReachable(context, scriptName)}}'),
     "script path checks validate only absolute script paths and probe the route server-side"
+);
+assertTrue(
+    sectionsJs.includes('"&includeInactive=" + (includeInactive ? "true" : "false")') &&
+        accessManagerHandlers.includes('Dim workspace = service.GetWorkspace(includeInactive)') &&
+        accessManagerService.includes('Public Function GetWorkspace(Optional includeInactive As Boolean = False)') &&
+        accessManagerService.includes('.Sections = _repository.ListSections(0, includeInactive)'),
+    "section detail reloads retain the inactive-section filter"
+);
+assertTrue(
+    sectionsJs.includes('button.classList.toggle("is-inactive", !!section.Inactive);') &&
+        accessCss.includes('.list-nav li > button:first-child.is-inactive,') &&
+        accessCss.includes('.list-nav li > button:first-child.is-inactive[aria-current="true"]') &&
+        accessCss.includes('font-weight: 400;'),
+    "inactive sections use muted regular-weight text, including when selected"
 );
 assertTrue(
     shellCss.includes(".workspace-heading {") &&

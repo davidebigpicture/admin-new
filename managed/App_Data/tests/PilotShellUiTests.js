@@ -205,6 +205,12 @@ assertTrue(
     "generated route and menu links prefer directory URLs while retaining URL suffixes"
 );
 assertTrue(
+    pilotJsonApi.includes('Dim existingToken = TryCast(context.Session(CsrfSessionKey), String)') &&
+        pilotJsonApi.includes('If Not String.IsNullOrWhiteSpace(existingToken) Then') &&
+        pilotJsonApi.includes('Return existingToken'),
+    "CSRF tokens remain stable within a session so concurrent admin tabs can submit mutations"
+);
+assertTrue(
     /@media \(max-width: 900px\)[\s\S]*?\.admin-menu\s*\{[^}]*max-height:\s*70vh;[^}]*opacity:\s*1;[^}]*transition:\s*max-height[^}]*opacity[^}]*\}[\s\S]*?\.menu-collapsed \.admin-menu\s*\{[^}]*height:\s*0 !important;[^}]*max-height:\s*0 !important;[^}]*overflow:\s*hidden;[^}]*opacity:\s*0;[^}]*\}[\s\S]*?\.menu-collapsed \.admin-menu-content\s*\{[^}]*display:\s*block;[^}]*\}[\s\S]*?\.admin-menu-toggle\s*\{[^}]*display:\s*none;[^}]*\}[\s\S]*?\.admin-menu-mobile-toggle\s*\{[^}]*display:\s*inline-flex;/.test(shellCss),
     "mobile shell animates the menu while retaining the hamburger and hidden desktop edge control"
 );

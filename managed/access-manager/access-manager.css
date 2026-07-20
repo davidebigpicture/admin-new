@@ -55,6 +55,12 @@
     font-weight: 600;
 }
 
+.list-nav li > button:first-child.is-inactive,
+.list-nav li > button:first-child.is-inactive[aria-current="true"] {
+    color: var(--shell-muted);
+    font-weight: 400;
+}
+
 .inline-edit {
     display: flex;
     align-items: center;
@@ -187,6 +193,10 @@
 
 .picker-create > .admin-action {
     margin-bottom: 0.75rem;
+}
+
+.script-route-alert {
+    margin: 0 0 0.75rem;
 }
 
 .script-create-form {

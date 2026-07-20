@@ -7,6 +7,7 @@ Module AccessManagerServiceTests
     Function Main() As Integer
         TestValidationRejectsBlankSectionName()
         TestCapabilityDenyForSections()
+        TestWorkspaceIncludesInactiveSectionsWhenRequested()
         TestServiceRejectsNoCapabilities()
         TestConcurrencyOnSectionUpdate()
         TestGrantCreateDedupesInactiveRow()
@@ -46,6 +47,29 @@ Module AccessManagerServiceTests
         AssertThrows(Of AdminShellForbiddenException)(
             Sub() service.ListSections(False),
             "section list requires section capability")
+    End Sub
+
+    Private Sub TestWorkspaceIncludesInactiveSectionsWhenRequested()
+        Dim repository As New FakeAccessManagerRepository()
+        repository.Sections.Add(New AccessManagerSection With {
+            .SectionId = 1,
+            .ParentId = 0,
+            .SectionName = "Active",
+            .Inactive = False
+        })
+        repository.Sections.Add(New AccessManagerSection With {
+            .SectionId = 2,
+            .ParentId = 0,
+            .SectionName = "Inactive",
+            .Inactive = True
+        })
+
+        Dim workspace = CreateService(AllCapabilities(), Nothing, repository).GetWorkspace(True)
+        If workspace.Sections.Count = 2 Then
+            Pass("workspace retains inactive sections when requested")
+        Else
+            Fail("workspace retains inactive sections when requested")
+        End If
     End Sub
 
     Private Sub TestServiceRejectsNoCapabilities()

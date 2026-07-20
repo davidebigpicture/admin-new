@@ -33,7 +33,7 @@ Public Class AccessManagerService
         End Get
     End Property
 
-    Public Function GetWorkspace() As AccessManagerWorkspace
+    Public Function GetWorkspace(Optional includeInactive As Boolean = False) As AccessManagerWorkspace
         EnsureCanReadWorkspace()
 
         Dim scriptTypes = _repository.ListScriptTypes()
@@ -44,7 +44,7 @@ Public Class AccessManagerService
 
         Return New AccessManagerWorkspace With {
             .Capabilities = _capabilities,
-            .Sections = _repository.ListSections(0, False),
+            .Sections = _repository.ListSections(0, includeInactive),
             .ScriptTypes = scriptTypes,
             .DefaultScriptType = defaultScriptType
         }
